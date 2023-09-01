@@ -8,6 +8,9 @@ import ts from 'typescript'
 import { LogsContainer } from './Console'
 
 const App = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+  (window as any).Tone = Tone
+
   let contents: string = ''
   const handleEditorChange: OnChange = (value) => contents = value ?? ''
   const execFromEditor = () => {
@@ -17,11 +20,8 @@ const App = () => {
     eval(transpiled)
   }
 
-  // TODO: find a new way to force Tone.js to be globally available in the browser context
-  new Tone.Synth()
-
+  const modules = import.meta.glob('../node_modules/tone/build/**/*.d.ts', { as: 'raw', eager: true })
   const handleEditorMount: OnMount = (editor, monaco) => {
-    const modules = import.meta.glob('../node_modules/tone/build/**/*.d.ts', { as: 'raw', eager: true })
     monaco.languages.typescript.typescriptDefaults.addExtraLib(`declare module Tone { ${Object.values(modules).join('\n')} }`, 'file:///tone')
 
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
