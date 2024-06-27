@@ -1,0 +1,21 @@
+// To be used for specifying *when* an action should happen
+typealias TimePosition = String
+
+typealias Effect = "flanger"|"lpf"
+
+typealias Synth = "FMSynth"|"AMSynth"
+
+class Instrument {
+    synth: Synth?
+    sample: String?
+    on: Listing<String>
+    with: Listing<Effect>
+}
+
+function everyBar(pattern: String(matches(Regex(#"\d:\d"#)))) = new Listing<String> {
+    for (n in IntSeq(0, 3)) {
+        "\"\(n):\(pattern)\""
+    }
+}.join(" ")
+
+x = everyBar("0:1")
