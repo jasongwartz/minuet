@@ -1,16 +1,15 @@
 import './App.css'
 
-import type { OnChange, OnMount } from '@monaco-editor/react'
-import Editor from '@monaco-editor/react'
-import type { editor } from 'monaco-editor'
+import type { OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState } from 'react'
-import * as Tone from 'tone'
-import ts from 'typescript'
+import type * as Tone from 'tone'
 
-import type { Main } from '../.out/main.pkl'
 import { LogsContainer } from './Console'
-import type { SampleDetails } from './lib/engine'
-import { Engine, getSamples } from './lib/engine'
+import Editor, { type EditorLanguage } from './Editor'
+import { execFromEditor } from './lib/evaluate'
+import { getSamples, type SampleDetails } from './lib/load_samples'
+import { loadSamples } from './lib/load_samples'
+import { Engine } from './ostinato/engine'
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -20,21 +19,12 @@ const App = () => {
 
   useEffect(() => {
     console.log('loading samples')
-    getSamples().then(async (results) => {
-      const players = await Promise.all(results.map(async (result) => {
-        console.log(`loading: ${result.name}`)
-        const player =  new Tone.Player()
-        await player.load(`https://chopsticks.vercel.app/${result.file}`)
-        console.log(`loaded: ${result.name}`)
-
-        return { ...result, player }
-      }))
-
-      setSamples(Object.fromEntries(players.map((p) => [p.name, p])))
-      setIsLoading(false)
-      setEngine(new Engine(Object.fromEntries(players.map((p) => [p.name, p.player]))))
-
-    }).catch(console.error)
+    getSamples().then(loadSamples)
+      .then((players) => {
+        setSamples(Object.fromEntries(players.map((p) => [p.name, p])))
+        setIsLoading(false)
+        setEngine(new Engine(Object.fromEntries(players.map((p) => [p.name, p.player]))))
+      }).catch(console.error)
   }, [])
   const samplesRef = useRef(samples)
   const engineRef = useRef(engineState)
@@ -47,7 +37,7 @@ const App = () => {
   })
 
 
-  const handleEditorMount: OnMount = (editor, monaco) => {
+  const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.defineTheme('custom', {
       base: 'vs',
       inherit: true,
@@ -59,11 +49,16 @@ const App = () => {
     monaco.editor.setTheme('custom')
 
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
-      execFromEditor(editor).catch(console.error)
+      if (engineRef.current) {
+        execFromEditor(
+          engineRef.current,
+          editor.getValue(),
+          editorLanguage,
+        ).catch(console.error)
+      }
     })
   }
 
-  type EditorLanguage = 'pkl' | 'typescript'
   const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('pkl')
 
   const defaultValue = `
@@ -90,47 +85,6 @@ instruments: Listing<Instrument> = new {
   }
 }
 `
-  const execFromEditor = async (editor: editor.IStandaloneCodeEditor) => {
-    const contents = editor.getValue()
-    const engine = engineRef.current
-
-    let evaluatedOutput: Main
-
-    const start = Date.now()
-    if (editorLanguage === 'pkl') {
-      const response = await
-      // fetch('https://pkl-playground.vercel.app/api/pkl/evaluate', {
-      fetch('http://localhost:3000/api/pkl/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ pklInput: contents, outputFormat: 'json' }) ,
-      })
-
-      console.log('request took', Date.now() - start)
-      const respJson = await response.json() as unknown
-
-      // TODO: Validate parsed instead of assertion
-      evaluatedOutput = JSON.parse((respJson as { output: string }).output) as Main
-
-    } else {
-      const transpiled = ts.transpile(contents)
-      console.log('TypeScript transpilation took', Date.now() - start)
-
-      // TODO: Validate parsed instead of assertion
-      evaluatedOutput = eval(transpiled) as Main
-    }
-
-
-    if (engine && Object.keys(samplesRef.current).length) {
-      engine.instruments = evaluatedOutput.instruments
-      if (!engine.started) {
-        await engine.start()
-      }
-    } else {
-      console.log('samples was empty', samples)
-      console.log('engine was', engine)
-    }
-  }
-
 
   return <div>
     <div>
@@ -152,16 +106,7 @@ instruments: Listing<Instrument> = new {
     </div>
 
     {/* TODO: does this require calling out to the internet??? */}
-    {isLoading ? <h1>Loading</h1> : <Editor
-      height="60vh"
-      width="60vw"
-      className='jason'
-      language={editorLanguage === 'typescript' ? 'typescript' : 'python' /* TODO: pkl? groovy? */ }
-      defaultValue={defaultValue}
-      // onChange={handleEditorChange}
-      onMount={handleEditorMount}
-      options={ { minimap: { enabled: false } } }
-    />}
+    {isLoading ? <h1>Loading</h1> : <Editor defaultValue={defaultValue} editorLanguage={editorLanguage} onEditorMount={onEditorMount} />}
 
     <LogsContainer />
   </div>

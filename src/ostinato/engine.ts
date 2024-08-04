@@ -72,14 +72,3 @@ export class Engine {
     this.loop.start(0)
   }
 }
-
-
-export const getSamples = async () => {
-  const metadataResponse = await fetch('https://chopsticks.vercel.app/static/sampledata.json')
-  const metadata = await metadataResponse.json() as Record<string, { file: string, category: string }>
-  return Object.entries(metadata).map((entry) => {
-    return { ...entry[1], name: entry[0] }
-  })
-}
-
-export type SampleDetails = Awaited<ReturnType<typeof getSamples>>[number]
