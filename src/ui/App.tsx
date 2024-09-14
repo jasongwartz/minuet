@@ -107,9 +107,9 @@ instruments: Listing<Instrument> = new {
 
     <div>
         Pkl
-      <input type="radio" onChange={() => setEditorLanguage('pkl')} checked={editorLanguage === 'pkl'}  />
+      <input type="radio" onChange={() => {setEditorLanguage('pkl')}} checked={editorLanguage === 'pkl'}  />
         TypeScript
-      <input type="radio" onChange={() => setEditorLanguage('typescript')} checked={editorLanguage === 'typescript'}  />
+      <input type="radio" onChange={() => {setEditorLanguage('typescript')}} checked={editorLanguage === 'typescript'}  />
     </div>
 
     {/* TODO: does this require calling out to the internet??? */}

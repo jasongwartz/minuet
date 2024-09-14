@@ -39,7 +39,6 @@ export class Engine {
             case 'lpf': return new Tone.Filter('C6', 'lowpass')
           }
         })
-          .filter((e): e is Tone.Distortion => e !== undefined)
 
         console.log(instrument.sample, 'chain: ', effects.map((e) => e.name))
 

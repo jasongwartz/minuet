@@ -29,7 +29,7 @@ export const execFromEditor = async (engine: Engine, contents: string, editorLan
     evaluatedOutput = eval(transpiled) as OstinatoSchema
   }
 
-  if (engine && Object.keys(engine.samples).length) {
+  if (Object.keys(engine.samples).length) {
     engine.instruments = evaluatedOutput.instruments
     if (!engine.started) {
       await engine.start()
