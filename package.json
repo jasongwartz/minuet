@@ -14,7 +14,8 @@
     "console-feed": "^3.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tone": "^14.7.77"
+    "tone": "^14.7.77",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@pkl-community/pkl-typescript": "^0.0.15",

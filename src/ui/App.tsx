@@ -4,29 +4,31 @@ import type { OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 
-import { execFromEditor } from '../lib/evaluate'
-import { getSamples, type SampleDetails } from '../lib/load_samples'
-import { loadSamples } from '../lib/load_samples'
+import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
 import { LogsContainer } from './Console'
 import Editor, { type EditorLanguage } from './Editor'
+import { getSamples, type SampleDetails } from './load_samples'
+import { loadSample } from './load_samples'
 
 const App = () => {
-
-
   const [isLoading, setIsLoading] = useState(false)
 
-  const [samples, setSamples] = useState({} as (Record<string, SampleDetails & { player: Tone.Player }>))
+  const [samples, setSamples] = useState(
+    {} as Record<string, SampleDetails & { player: Tone.Player }>,
+  )
   const [engineState, setEngine] = useState<Engine | null>(null)
 
   useEffect(() => {
     console.log('loading samples')
-    getSamples().then(loadSamples)
+    getSamples()
+      .then((s) => Promise.all(s.map(loadSample)))
       .then((players) => {
         setSamples(Object.fromEntries(players.map((p) => [p.name, p])))
         setIsLoading(false)
         setEngine(new Engine(Object.fromEntries(players.map((p) => [p.name, p.player]))))
-      }).catch(console.error)
+      })
+      .catch(console.error)
   }, [])
   const samplesRef = useRef(samples)
   const engineRef = useRef(engineState)
@@ -51,11 +53,7 @@ const App = () => {
 
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
       if (engineRef.current) {
-        execFromEditor(
-          engineRef.current,
-          editor.getValue(),
-          editorLanguage,
-        ).catch(console.error)
+        execFromEditor(engineRef.current, editor.getValue(), editorLanguage).catch(console.error)
       }
     })
   }
@@ -69,54 +67,74 @@ typealias Synth = "FMSynth"|"AMSynth"
 
 class Instrument {
     synth: Synth?
-    sample: String?
+    sample: Dynamic
     on: Listing<String>
     with: Listing<Effect>
 }
 
+function everyBar(pattern: String(matches(Regex(#"\\d:\\d"#)))) = new Listing<String> {
+    for (n in IntSeq(0, 3)) {
+        "\\"\\(n):\\(pattern)\\""
+    }
+}.join(" ")
+
 instruments: Listing<Instrument> = new {
   new {
-      sample = "amen_loop"
+      sample { name = "9_Drum_03_85bpm.wav" }
       on { "0" }
       with {}
-  }
-
-  new {
-      sample = "bass_drum"
-      on { "0" "1m" "2m" "3m" }
-      with {}
-  }
-  new {
-    sample = "hi_hat"
-    on { "0:1" "0:3" "1:1" "1:3" "2:1" "2:3" }
   }
 }
 `
 
-  return <div>
+  return (
     <div>
-      { Object.entries(samples).map((sample) =>
-        <button onClick={() => {
-          sample[1].player.toDestination().start(0)
-        }}>{sample[1].name}</button>,
-      ) }
-    </div>
-    <h1>
-      Samples: {Object.keys(samples).length}
-    </h1>
+      <div>
+        {Object.entries(samples).map((sample) => (
+          <button
+            onClick={() => {
+              sample[1].player.toDestination().start(0)
+            }}
+          >
+            {sample[1].name}
+          </button>
+        ))}
+      </div>
+      <h1>Samples: {Object.keys(samples).length}</h1>
 
-    <div>
+      <div>
         Pkl
-      <input type="radio" onChange={() => {setEditorLanguage('pkl')}} checked={editorLanguage === 'pkl'}  />
+        <input
+          type='radio'
+          onChange={() => {
+            setEditorLanguage('pkl')
+          }}
+          checked={editorLanguage === 'pkl'}
+        />
         TypeScript
-      <input type="radio" onChange={() => {setEditorLanguage('typescript')}} checked={editorLanguage === 'typescript'}  />
+        <input
+          type='radio'
+          onChange={() => {
+            setEditorLanguage('typescript')
+          }}
+          checked={editorLanguage === 'typescript'}
+        />
+      </div>
+
+      {/* TODO: does this require calling out to the internet??? */}
+      {isLoading ? (
+        <h1>Loading</h1>
+      ) : (
+        <Editor
+          defaultValue={defaultValue}
+          editorLanguage={editorLanguage}
+          onEditorMount={onEditorMount}
+        />
+      )}
+
+      <LogsContainer />
     </div>
-
-    {/* TODO: does this require calling out to the internet??? */}
-    {isLoading ? <h1>Loading</h1> : <Editor defaultValue={defaultValue} editorLanguage={editorLanguage} onEditorMount={onEditorMount} />}
-
-    <LogsContainer />
-  </div>
+  )
 }
 
 export default App
