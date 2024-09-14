@@ -4,14 +4,16 @@ import type { OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 
+import { execFromEditor } from '../lib/evaluate'
+import { getSamples, type SampleDetails } from '../lib/load_samples'
+import { loadSamples } from '../lib/load_samples'
+import { Engine } from '../ostinato'
 import { LogsContainer } from './Console'
 import Editor, { type EditorLanguage } from './Editor'
-import { execFromEditor } from './lib/evaluate'
-import { getSamples, type SampleDetails } from './lib/load_samples'
-import { loadSamples } from './lib/load_samples'
-import { Engine } from './ostinato/engine'
 
 const App = () => {
+
+
   const [isLoading, setIsLoading] = useState(false)
 
   const [samples, setSamples] = useState({} as (Record<string, SampleDetails & { player: Tone.Player }>))
@@ -35,7 +37,6 @@ const App = () => {
   useEffect(() => {
     engineRef.current = engineState
   })
-
 
   const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.defineTheme('custom', {
@@ -74,6 +75,12 @@ class Instrument {
 }
 
 instruments: Listing<Instrument> = new {
+  new {
+      sample = "amen_loop"
+      on { "0" }
+      with {}
+  }
+
   new {
       sample = "bass_drum"
       on { "0" "1m" "2m" "3m" }

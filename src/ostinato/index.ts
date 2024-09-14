@@ -1,7 +1,9 @@
 import * as Tone from 'tone'
 import type { Transport } from 'tone/build/esm/core/clock/Transport'
 
-import type { Instrument } from '../../.out/main.pkl'
+import type { Instrument, OstinatoSchema } from './schema'
+
+export type { Instrument, OstinatoSchema }
 
 export class Engine {
   samples: Record<string, Tone.Player>
@@ -15,7 +17,7 @@ export class Engine {
 
   callback = (time: number) => {
     for (const instrument of this.instruments) {
-      if (instrument.synth) {
+      if ('synth' in instrument) {
         const synth =
             instrument.synth === 'FMSynth'
               ? new Tone.FMSynth().toDestination()
@@ -28,11 +30,11 @@ export class Engine {
           )
         }
       }
-      if (instrument.sample) {
-        const sample = this.samples[instrument.sample]
+      if ('sample' in instrument) {
+        const sample = this.samples[instrument.sample.name]
 
-        const effects = instrument.with.map((name) => {
-          switch (name) {
+        const effects = instrument.with.map((effect) => {
+          switch (effect.name) {
             case 'flanger': return new Tone.Distortion(0.4)
             case 'lpf': return new Tone.Filter('C6', 'lowpass')
           }
@@ -48,8 +50,14 @@ export class Engine {
         sample.chain(...effects, Tone.Destination)
         const player = sample.toDestination()
 
+        /*
+        // HOW TO IMPLEMENT stretching sample to a whole bar
+        console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
+        player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
+        */
+
         for (const note of instrument.on.sort()) {
-          console.log(`scheduling ${instrument.sample} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`)
+          console.log(`scheduling ${instrument.sample.name} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`)
           player.start(time + Tone.Time(note).toSeconds())
         }
       }
@@ -57,7 +65,6 @@ export class Engine {
   }
 
   constructor(samples: Record<string, Tone.Player>) {
-    console.log('init')
     this.instruments = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')

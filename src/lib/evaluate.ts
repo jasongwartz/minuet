@@ -1,11 +1,10 @@
 import ts from 'typescript'
 
-import type { Main } from '../../.out/main.pkl'
-import type { EditorLanguage } from '../Editor'
-import type { Engine } from '../ostinato/engine'
+import type { Engine, OstinatoSchema } from '../ostinato'
+import type { EditorLanguage } from '../ui/Editor'
 
 export const execFromEditor = async (engine: Engine, contents: string, editorLanguage: EditorLanguage) => {
-  let evaluatedOutput: Main
+  let evaluatedOutput: OstinatoSchema
 
   const start = Date.now()
   if (editorLanguage === 'pkl') {
@@ -20,14 +19,14 @@ export const execFromEditor = async (engine: Engine, contents: string, editorLan
     const respJson = await response.json() as unknown
 
     // TODO: Validate parsed instead of assertion
-    evaluatedOutput = JSON.parse((respJson as { output: string }).output) as Main
+    evaluatedOutput = JSON.parse((respJson as { output: string }).output) as OstinatoSchema
 
   } else {
     const transpiled = ts.transpile(contents)
     console.log('TypeScript transpilation took', Date.now() - start)
 
     // TODO: Validate parsed instead of assertion
-    evaluatedOutput = eval(transpiled) as Main
+    evaluatedOutput = eval(transpiled) as OstinatoSchema
   }
 
   if (engine && Object.keys(engine.samples).length) {

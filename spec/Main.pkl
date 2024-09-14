@@ -1,3 +1,0 @@
-import "./Lib.pkl"
-
-instruments: Listing<Lib.Instrument>
