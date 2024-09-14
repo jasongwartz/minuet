@@ -15,6 +15,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tone": "^14.7.77",
+    "webmidi": "^3.1.11",
     "zod": "^3.23.8"
   },
   "devDependencies": {

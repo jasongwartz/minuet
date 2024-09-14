@@ -1,5 +1,6 @@
 import * as Tone from 'tone'
 import type { Transport } from 'tone/build/esm/core/clock/Transport'
+import { WebMidi as WM } from 'webmidi'
 
 import type { Instrument, OstinatoSchema } from './schema'
 
@@ -10,13 +11,18 @@ export class Engine {
   instruments: Instrument[]
   loop: Tone.Loop
   transport: Transport
+  webMidi: typeof WM | undefined
 
   get started() {
     return this.transport.state === 'started'
   }
 
+  // TODO: pre-collect all the playback, and only schedule if no errors
+  // during planning (otherwise keep playing what was previously scheduled).
+  // That, or schedule everything except the instruments that had errors?
   callback = (time: number) => {
     for (const instrument of this.instruments) {
+      console.log('processing instrument', instrument)
       if ('synth' in instrument) {
         const synth =
           instrument.synth === 'FMSynth'
@@ -26,14 +32,15 @@ export class Engine {
           synth.triggerAttackRelease('C4', '8n', time + Tone.Time(note).toSeconds())
         }
       }
-      console.log('processing instrument', instrument)
+
       if ('sample' in instrument) {
         console.log('of type sample')
         console.log(this.samples)
-        if (!(instrument.sample.name in this.samples)) {
+
+        const sample = this.samples[instrument.sample.name]
+        if (!sample) {
           throw new Error('Sample name unknown!')
         }
-        const sample = this.samples[instrument.sample.name]
 
         const effects = instrument.with.map((effect) => {
           switch (effect.name) {
@@ -41,6 +48,16 @@ export class Engine {
               return new Tone.Distortion(0.4)
             case 'lpf':
               return new Tone.Filter('C6', 'lowpass')
+            case 'gain':
+              if (typeof effect.value === 'number') {
+                return new Tone.Gain(effect.value, 'decibels')
+              } else {
+                const gainNode = new Tone.Gain(0, 'decibels')
+                this.webMidi?.inputs[0]?.addListener('controlchange', (e) => {
+                  gainNode.gain.value = (28 - ((e.rawValue ?? 0) / 127) * 28) * -1
+                })
+                return gainNode
+              }
           }
         })
 
@@ -90,6 +107,7 @@ export class Engine {
 
   async start() {
     await Tone.start()
+    this.webMidi = await WM.enable()
     // Tone.Transport.timeSignature = [22, 8]
     console.log(Tone.Transport.timeSignature)
     this.transport.start()
