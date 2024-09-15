@@ -10,32 +10,26 @@ module.exports = {
     tsconfigRootDir: __dirname,
   },
 
-  plugins: [
-    '@typescript-eslint',
-    'simple-import-sort',
-    'react-refresh'
-  ],
+  plugins: ['@typescript-eslint', 'simple-import-sort', 'react-refresh'],
 
   extends: [
     'eslint:recommended',
+    'plugin:react-hooks/recommended',
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/strict-type-checked',
-    'plugin:react-hooks/recommended',
-    'prettier'
+    'plugin:@typescript-eslint/stylistic-type-checked',
+    'prettier',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs', 'vite.config.ts'],
 
-  'rules': {
+  rules: {
     '@typescript-eslint/consistent-type-imports': 'error',
     'simple-import-sort/imports': 'error',
-    'camelcase': ['error', {properties: 'always'}],
-    'eqeqeq': ['error', 'always'],
+    camelcase: ['error', { properties: 'always' }],
+    eqeqeq: ['error', 'always'],
     'prefer-const': 'error',
     'func-style': ['error', 'expression'],
 
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
   },
 }
