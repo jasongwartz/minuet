@@ -21,11 +21,9 @@ export default defineConfig({
         })
         server.middlewares.use((req, res, next) => {
           if (req.url.includes('/samples') && req.url.endsWith('.wav')) {
-            const filePath = join(
-              __dirname,
-              'public/',
-              decodeURIComponent(req.url.match(/.+\/(.*.wav)/)[0]),
-            )
+            const pathComponents = req.url.split('/')
+            const wavFilename = pathComponents[pathComponents.length - 1]
+            const filePath = join(__dirname, 'public/samples/', decodeURIComponent(wavFilename))
             console.log('returning sample at:', filePath)
             const stream = createReadStream(filePath)
             stream.on('error', next)
