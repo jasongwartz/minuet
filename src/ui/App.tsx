@@ -6,7 +6,6 @@ import type * as Tone from 'tone'
 
 import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
-import { LogsContainer } from './Console'
 import Editor, { type EditorLanguage } from './Editor'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -131,8 +130,6 @@ instruments: Listing<Instrument> = new {
           onEditorMount={onEditorMount}
         />
       )}
-
-      <LogsContainer />
     </div>
   )
 }
