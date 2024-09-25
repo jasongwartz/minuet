@@ -12,8 +12,7 @@ export const execFromEditor = async (
 
   const start = Date.now()
   if (editorLanguage === 'pkl') {
-    const response = await
-    // fetch('https://pkl-playground.vercel.app/api/pkl/evaluate', {
+    const response = await // fetch('https://pkl-playground.vercel.app/api/pkl/evaluate', {
     fetch('http://localhost:3000/api/pkl/evaluate', {
       method: 'POST',
       body: JSON.stringify({ pklInput: contents, outputFormat: 'json' }),
