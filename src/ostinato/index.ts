@@ -47,14 +47,41 @@ export class Engine {
             case 'flanger':
               return new Tone.Distortion(0.4)
             case 'lpf':
-              return new Tone.Filter('C6', 'lowpass')
+              if (typeof effect.value === 'number') {
+                return new Tone.Filter('C6', 'lowpass')
+              } else {
+                const lowerBound = Tone.Frequency('C2').toFrequency()
+                const upperBound = Tone.Frequency('C8').toFrequency()
+                const filterNode = new Tone.Filter(upperBound, 'lowpass')
+
+                this.webMidi.inputs[0].addListener('controlchange', (e) => {
+                  const chunkSize = (upperBound - lowerBound) / 127
+                  filterNode.frequency.value = (e.rawValue ?? 0) * chunkSize + lowerBound
+                })
+                return filterNode
+              }
+
+            case 'hpf':
+              if (typeof effect.value === 'number') {
+                return new Tone.Filter('C6', 'highpass')
+              } else {
+                const lowerBound = Tone.Frequency('C1').toFrequency()
+                const upperBound = Tone.Frequency('C8').toFrequency()
+                const filterNode = new Tone.Filter(lowerBound, 'highpass')
+
+                this.webMidi.inputs[0].addListener('controlchange', (e) => {
+                  const chunkSize = (upperBound - lowerBound) / 127
+                  filterNode.frequency.value = (e.rawValue ?? 0) * chunkSize + lowerBound
+                })
+                return filterNode
+              }
             case 'gain':
               if (typeof effect.value === 'number') {
                 return new Tone.Gain(effect.value, 'decibels')
               } else {
-                const gainNode = new Tone.Gain(0, 'decibels')
-                this.webMidi?.inputs[0]?.addListener('controlchange', (e) => {
-                  gainNode.gain.value = (28 - ((e.rawValue ?? 0) / 127) * 28) * -1
+                const gainNode = new Tone.Gain(1, 'gain')
+                this.webMidi.inputs[0].addListener('controlchange', (e) => {
+                  gainNode.gain.value = (e.rawValue ?? 1) / 127
                 })
                 return gainNode
               }
@@ -72,7 +99,7 @@ export class Engine {
         sample.disconnect()
 
         sample.chain(...effects, Tone.Destination)
-        const player = sample.toDestination()
+        const player = sample
 
         /*
         // HOW TO IMPLEMENT stretching sample to a whole bar

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 const zEffect = z.object({
-  name: z.enum(['flanger', 'lpf', 'gain']),
+  name: z.enum(['flanger', 'lpf', 'hpf', 'gain']),
   value: z
     .number()
     .min(0)
