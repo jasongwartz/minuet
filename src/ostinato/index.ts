@@ -1,5 +1,5 @@
 import * as Tone from 'tone'
-import type { Transport } from 'tone/build/esm/core/clock/Transport'
+import type { TransportClass } from 'tone/build/esm/core/clock/Transport'
 import { WebMidi as WM } from 'webmidi'
 
 import type { Instrument, OstinatoSchema } from './schema'
@@ -10,7 +10,7 @@ export class Engine {
   samples: Record<string, Tone.Player>
   instruments: Instrument[]
   loop: Tone.Loop
-  transport: Transport
+  transport: TransportClass
   webMidi: typeof WM | undefined
 
   get started() {
