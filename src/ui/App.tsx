@@ -57,33 +57,35 @@ const App = () => {
     })
   }
 
-  const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('pkl')
+  const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('typescript')
 
   const defaultValue = `
-typealias Effect = "flanger"|"lpf"
-
-typealias Synth = "FMSynth"|"AMSynth"
-
-class Instrument {
-    synth: Synth?
-    sample: Dynamic
-    on: Listing<String>
-    with: Listing<Effect>
-}
-
-function everyBar(pattern: String(matches(Regex(#"\\d:\\d"#)))) = new Listing<String> {
-    for (n in IntSeq(0, 3)) {
-        "\\"\\(n):\\(pattern)\\""
-    }
-}.join(" ")
-
-instruments: Listing<Instrument> = new {
-  new {
-      sample { name = "9_Drum_03_85bpm.wav" }
-      on { "0" }
-      with {}
-  }
-}
+({
+  instruments: [
+    {
+      sample: {
+        name: "9_Drum_03_85bpm.wav",
+        stretchTo: "4:0:0"
+      },
+      on: ["0"],
+      with: [
+        { name: "lpf", value: { from: { controller: 1 } } },
+        { name: "gain", value: { from: { controller: 2 } } },
+      ]
+    },
+    {
+      sample: {
+        name: "7_Drum_01_85bpm.wav",
+        stretchTo: "4:0:0"
+      },
+      on: ["0"],
+      with: [
+        { name: "hpf", value: { from: { controller: 3 } } },
+        { name: "gain", value: { from: { controller: 4 } } }
+      ]
+    },
+  ]
+})
 `
 
   return (

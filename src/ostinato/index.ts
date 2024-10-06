@@ -2,7 +2,7 @@ import * as Tone from 'tone'
 import type { TransportClass } from 'tone/build/esm/core/clock/Transport'
 import { WebMidi as WM } from 'webmidi'
 
-import type { Instrument, OstinatoSchema } from './schema'
+import type { EffectName, EffectValueFrom, Instrument, OstinatoSchema } from './schema'
 
 export type { Instrument, OstinatoSchema }
 
@@ -11,7 +11,7 @@ export class Engine {
   instruments: Instrument[]
   loop: Tone.Loop
   transport: TransportClass
-  webMidi: typeof WM | undefined
+  webMidi: typeof WM
 
   get started() {
     return this.transport.state === 'started'
@@ -34,58 +34,125 @@ export class Engine {
       }
 
       if ('sample' in instrument) {
-        console.log('of type sample')
-        console.log(this.samples)
-
         const sample = this.samples[instrument.sample.name]
         if (!sample) {
           throw new Error('Sample name unknown!')
         }
 
         const effects = instrument.with.map((effect) => {
-          switch (effect.name) {
-            case 'flanger':
-              return new Tone.Distortion(0.4)
-            case 'lpf':
-              if (typeof effect.value === 'number') {
-                return new Tone.Filter('C6', 'lowpass')
-              } else {
-                const lowerBound = Tone.Frequency('C2').toFrequency()
-                const upperBound = Tone.Frequency('C8').toFrequency()
-                const filterNode = new Tone.Filter(upperBound, 'lowpass')
+          console.debug('Processing effect', effect)
 
-                this.webMidi.inputs[0].addListener('controlchange', (e) => {
-                  const chunkSize = (upperBound - lowerBound) / 127
-                  filterNode.frequency.value = (e.rawValue ?? 0) * chunkSize + lowerBound
-                })
-                return filterNode
-              }
+          let valueFrom: EffectValueFrom | null
+          let midiInputNumber: number | null
 
-            case 'hpf':
-              if (typeof effect.value === 'number') {
-                return new Tone.Filter('C6', 'highpass')
-              } else {
-                const lowerBound = Tone.Frequency('C1').toFrequency()
-                const upperBound = Tone.Frequency('C8').toFrequency()
-                const filterNode = new Tone.Filter(lowerBound, 'highpass')
-
-                this.webMidi.inputs[0].addListener('controlchange', (e) => {
-                  const chunkSize = (upperBound - lowerBound) / 127
-                  filterNode.frequency.value = (e.rawValue ?? 0) * chunkSize + lowerBound
-                })
-                return filterNode
-              }
-            case 'gain':
-              if (typeof effect.value === 'number') {
-                return new Tone.Gain(effect.value, 'decibels')
-              } else {
-                const gainNode = new Tone.Gain(1, 'gain')
-                this.webMidi.inputs[0].addListener('controlchange', (e) => {
-                  gainNode.gain.value = (e.rawValue ?? 1) / 127
-                })
-                return gainNode
-              }
+          if (typeof effect.value === 'object') {
+            valueFrom = effect.value
+            console.log('inputs length', this.webMidi.inputs.length)
+            if (this.webMidi.inputs.length === 1) {
+              midiInputNumber = 0
+            } else if (valueFrom.from.input) {
+              midiInputNumber = valueFrom.from.input
+            } else {
+              throw new Error('from.input is required when more than 1 MIDI device is connected')
+            }
+          } else {
+            valueFrom = null
+            midiInputNumber = null
           }
+          const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
+          console.log('midi input selected', midiInput)
+
+          type Effects = Tone.Distortion | Tone.Filter | Tone.Gain
+
+          interface Effect<T extends Effects> {
+            min: number
+            max: number
+            default: number
+            node: (startValue: number) => T
+            update: (node: T, newValue: number) => void
+          }
+
+          const createEffect = <T extends Effects>(effect: Effect<T>): Effect<T> => effect
+
+          const effects: Record<EffectName, Effect<any>> = {
+            distortion: createEffect({
+              default: 0,
+              min: 0,
+              max: 1,
+              node: (v): Tone.Distortion => new Tone.Distortion(v),
+              update: (n, v) => {
+                n.distortion = v
+              },
+            }),
+
+            lpf: createEffect({
+              default: Tone.Frequency('C8').toFrequency(),
+              min: Tone.Frequency('C2').toFrequency(),
+              max: Tone.Frequency('C8').toFrequency(),
+              node: (v) => new Tone.Filter(v, 'lowpass'),
+              update: (n, v) => {
+                n.frequency.value = v
+              },
+            }),
+            hpf: createEffect({
+              default: Tone.Frequency('C1').toFrequency(),
+              min: Tone.Frequency('C1').toFrequency(),
+              max: Tone.Frequency('C8').toFrequency(),
+              node: (v) => new Tone.Filter(v, 'highpass'),
+              update: (n, v) => {
+                n.frequency.value = v
+              },
+            }),
+            gain: createEffect({
+              default: 1,
+              min: 0,
+              max: 1,
+              node: (v) => new Tone.Gain(v),
+              update: (n, v) => {
+                n.gain.value = v
+              },
+            }),
+          }
+
+          const e = effects[effect.name]
+          const min = valueFrom?.from.min
+            ? typeof valueFrom.from.min === 'string'
+              ? Tone.Frequency(valueFrom.from.min).toFrequency()
+              : valueFrom.from.min
+            : e.min
+          const max = valueFrom?.from.max
+            ? typeof valueFrom.from.max === 'string'
+              ? Tone.Frequency(valueFrom.from.max).toFrequency()
+              : valueFrom.from.max
+            : e.max
+
+          const startValue =
+            typeof effect.value === 'number'
+              ? effect.value
+              : typeof effect.value === 'string'
+                ? Tone.Frequency(effect.value).toFrequency()
+                : effects[effect.name].default
+
+          const node = effects[effect.name].node(startValue)
+
+          console.log('typeof', typeof effect.value)
+          if (typeof effect.value === 'object') {
+            const chunkSize = (max - min) / 127
+            console.log('chunksize', chunkSize)
+
+            midiInput!.addListener('controlchange', (e) => {
+              console.log(e)
+              console.log(
+                valueFrom?.from.controller,
+                e.controller.number,
+                valueFrom?.from.controller === e.controller.number,
+              )
+              if (valueFrom?.from.controller === e.controller.number) {
+                node.update((e.rawValue ?? 0) * chunkSize + min)
+              }
+            })
+          }
+          return node
         })
 
         console.log(
@@ -98,7 +165,7 @@ export class Engine {
         // and to allow removing of effects from samples that previously had them.
         sample.disconnect()
 
-        sample.chain(...effects, Tone.Destination)
+        sample.chain(...effects, Tone.getDestination())
         const player = sample
 
         /*
@@ -130,11 +197,12 @@ export class Engine {
     this.loop = new Tone.Loop(this.callback, '4m')
     this.transport = Tone.Transport
     this.transport.bpm.value = 70
+    this.webMidi = WM
   }
 
   async start() {
     await Tone.start()
-    this.webMidi = await WM.enable()
+    this.webMidi = await this.webMidi.enable()
     // Tone.Transport.timeSignature = [22, 8]
     console.log(Tone.Transport.timeSignature)
     this.transport.start()
