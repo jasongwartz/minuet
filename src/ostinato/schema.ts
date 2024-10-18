@@ -1,37 +1,55 @@
-// .or(
-//   z.object({
-//     oscillator: z.enum(['lfo']),
-//     min: z.number(),
-//     max: z.number(),
-//     period: z.string(),
-//   }),
-// ),
-
 import { z } from 'zod'
 
 const zEffectValueFrom = z.object({
-  from: z.object({
-    input: z.number().optional(), // Inferred as 0 if only 1 midi device connected
-    controller: z.number(),
-    min: z.union([z.string(), z.number()]).optional(),
-    max: z.union([z.string(), z.number()]).optional(),
-  }),
+  from: z
+    .object({
+      input: z.number().optional(), // Inferred as 0 if only 1 midi device connected
+      controller: z.number(),
+      min: z.union([z.string(), z.number()]).optional(),
+      max: z.union([z.string(), z.number()]).optional(),
+    })
+    .or(
+      z.object({
+        oscillator: z.enum(['lfo']),
+        min: z.number(),
+        max: z.number(),
+        period: z.string(),
+      }),
+    ),
 })
 
 export type EffectValueFrom = z.infer<typeof zEffectValueFrom>
 
-const zEffect = z.object({
+const zEffectValueParam = z.number().or(z.string()).or(zEffectValueFrom)
+
+const zEffectNameBase = z.object({
   name: z.enum([
     // 'flanger',
     'lpf',
     'hpf',
     'gain',
     'distortion',
+    'volume',
   ]),
-  value: z.number().or(z.string()).or(zEffectValueFrom),
 })
 
+const zEffect = z.union([
+  zEffectNameBase.merge(
+    z.object({
+      value: zEffectValueParam,
+    }),
+  ),
+  zEffectNameBase.merge(
+    z.object({
+      params: zEffectValueParam.or(
+        z.array(z.object({ name: z.string(), value: zEffectValueParam })),
+      ),
+    }),
+  ),
+])
+
 export type EffectName = z.infer<typeof zEffect>['name']
+export type Effect = z.infer<typeof zEffect>
 
 const zEffectable = z.object({
   with: z.array(zEffect),

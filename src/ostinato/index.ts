@@ -2,6 +2,7 @@ import * as Tone from 'tone'
 import type { TransportClass } from 'tone/build/esm/core/clock/Transport'
 import { WebMidi as WM } from 'webmidi'
 
+import { EffectWrapper } from './effect'
 import type { EffectName, EffectValueFrom, Instrument, OstinatoSchema } from './schema'
 
 export type { Instrument, OstinatoSchema }
@@ -39,21 +40,25 @@ export class Engine {
           throw new Error('Sample name unknown!')
         }
 
-        const effects = instrument.with.map((effect) => {
+        const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
           console.debug('Processing effect', effect)
 
-          let valueFrom: EffectValueFrom | null
+          let valueFrom: EffectValueFrom['from'] | null
           let midiInputNumber: number | null
 
-          if (typeof effect.value === 'object') {
-            valueFrom = effect.value
-            console.log('inputs length', this.webMidi.inputs.length)
-            if (this.webMidi.inputs.length === 1) {
-              midiInputNumber = 0
-            } else if (valueFrom.from.input) {
-              midiInputNumber = valueFrom.from.input
+          if ('value' in effect && typeof effect.value === 'object') {
+            valueFrom = effect.value.from
+            if ('controller' in valueFrom) {
+              console.log('inputs length', this.webMidi.inputs.length)
+              if (this.webMidi.inputs.length === 1) {
+                midiInputNumber = 0
+              } else if ('input' in valueFrom && valueFrom.input) {
+                midiInputNumber = valueFrom.input
+              } else {
+                throw new Error('from.input is required when more than 1 MIDI device is connected')
+              }
             } else {
-              throw new Error('from.input is required when more than 1 MIDI device is connected')
+              midiInputNumber = null
             }
           } else {
             valueFrom = null
@@ -62,97 +67,57 @@ export class Engine {
           const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
           console.log('midi input selected', midiInput)
 
-          type Effects = Tone.Distortion | Tone.Filter | Tone.Gain
-
-          interface Effect<T extends Effects> {
-            min: number
-            max: number
-            default: number
-            node: (startValue: number) => T
-            update: (node: T, newValue: number) => void
-          }
-
-          const createEffect = <T extends Effects>(effect: Effect<T>): Effect<T> => effect
-
-          const effects: Record<EffectName, Effect<any>> = {
-            distortion: createEffect({
-              default: 0,
-              min: 0,
-              max: 1,
-              node: (v): Tone.Distortion => new Tone.Distortion(v),
-              update: (n, v) => {
-                n.distortion = v
-              },
-            }),
-
-            lpf: createEffect({
-              default: Tone.Frequency('C8').toFrequency(),
-              min: Tone.Frequency('C2').toFrequency(),
-              max: Tone.Frequency('C8').toFrequency(),
-              node: (v) => new Tone.Filter(v, 'lowpass'),
-              update: (n, v) => {
-                n.frequency.value = v
-              },
-            }),
-            hpf: createEffect({
-              default: Tone.Frequency('C1').toFrequency(),
-              min: Tone.Frequency('C1').toFrequency(),
-              max: Tone.Frequency('C8').toFrequency(),
-              node: (v) => new Tone.Filter(v, 'highpass'),
-              update: (n, v) => {
-                n.frequency.value = v
-              },
-            }),
-            gain: createEffect({
-              default: 1,
-              min: 0,
-              max: 1,
-              node: (v) => new Tone.Gain(v),
-              update: (n, v) => {
-                n.gain.value = v
-              },
-            }),
-          }
-
-          const e = effects[effect.name]
-          const min = valueFrom?.from.min
-            ? typeof valueFrom.from.min === 'string'
-              ? Tone.Frequency(valueFrom.from.min).toFrequency()
-              : valueFrom.from.min
-            : e.min
-          const max = valueFrom?.from.max
-            ? typeof valueFrom.from.max === 'string'
-              ? Tone.Frequency(valueFrom.from.max).toFrequency()
-              : valueFrom.from.max
-            : e.max
+          const e = new EffectWrapper(effect.name)
 
           const startValue =
-            typeof effect.value === 'number'
-              ? effect.value
-              : typeof effect.value === 'string'
-                ? Tone.Frequency(effect.value).toFrequency()
-                : effects[effect.name].default
+            'value' in effect
+              ? typeof effect.value === 'number'
+                ? effect.value
+                : typeof effect.value === 'string'
+                  ? Tone.Frequency(effect.value).toFrequency()
+                  : e.default
+              : e.default
 
-          const node = effects[effect.name].node(startValue)
+          e.update(startValue)
 
-          console.log('typeof', typeof effect.value)
-          if (typeof effect.value === 'object') {
-            const chunkSize = (max - min) / 127
-            console.log('chunksize', chunkSize)
+          if (valueFrom) {
+            if ('controller' in valueFrom) {
+              const min = valueFrom.min
+                ? typeof valueFrom.min === 'string'
+                  ? Tone.Frequency(valueFrom.min).toFrequency()
+                  : valueFrom.min
+                : e.min
+              const max = valueFrom.max
+                ? typeof valueFrom.max === 'string'
+                  ? Tone.Frequency(valueFrom.max).toFrequency()
+                  : valueFrom.max
+                : e.max
 
-            midiInput!.addListener('controlchange', (e) => {
-              console.log(e)
-              console.log(
-                valueFrom?.from.controller,
-                e.controller.number,
-                valueFrom?.from.controller === e.controller.number,
+              const chunkSize = (max - min) / 127
+              console.log('chunksize', chunkSize)
+
+              midiInput!.addListener('controlchange', (event) => {
+                console.log(
+                  valueFrom.controller,
+                  event.controller.number,
+                  valueFrom.controller === event.controller.number,
+                )
+                if (valueFrom.controller === event.controller.number) {
+                  e.update((event.rawValue ?? 0) * chunkSize + min)
+                }
+              })
+            } else {
+              const osc = new Tone.LFO(
+                valueFrom.period,
+                Tone.Frequency(valueFrom.min).toFrequency(),
+                Tone.Frequency(valueFrom.max).toFrequency(),
               )
-              if (valueFrom?.from.controller === e.controller.number) {
-                node.update((e.rawValue ?? 0) * chunkSize + min)
-              }
-            })
+              // n.connect(osc, node)
+              // DON'T FORGET TO IMPLEMENT connect()
+              osc.start()
+            }
           }
-          return node
+          return e
         })
 
         console.log(
@@ -165,7 +130,7 @@ export class Engine {
         // and to allow removing of effects from samples that previously had them.
         sample.disconnect()
 
-        sample.chain(...effects, Tone.getDestination())
+        sample.chain(...effects.map((e) => e.node), Tone.getDestination())
         const player = sample
 
         /*
