@@ -6,6 +6,8 @@ import type * as Tone from 'tone'
 
 import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
+import defaultPkl from './default_pkl.txt'
+import defaultTs from './default_ts.txt'
 import Editor, { type EditorLanguage } from './Editor'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -59,33 +61,6 @@ const App = () => {
 
   const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('pkl')
 
-  const defaultValue = `
-typealias Effect = "flanger"|"lpf"
-
-typealias Synth = "FMSynth"|"AMSynth"
-
-class Instrument {
-    synth: Synth?
-    sample: Dynamic
-    on: Listing<String>
-    with: Listing<Effect>
-}
-
-function everyBar(pattern: String(matches(Regex(#"\\d:\\d"#)))) = new Listing<String> {
-    for (n in IntSeq(0, 3)) {
-        "\\"\\(n):\\(pattern)\\""
-    }
-}.join(" ")
-
-instruments: Listing<Instrument> = new {
-  new {
-      sample { name = "9_Drum_03_85bpm.wav" }
-      on { "0" }
-      with {}
-  }
-}
-`
-
   return (
     <div>
       <div>
@@ -127,7 +102,7 @@ instruments: Listing<Instrument> = new {
         <h1>Loading</h1>
       ) : (
         <Editor
-          defaultValue={defaultValue}
+          defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
           editorLanguage={editorLanguage}
           onEditorMount={onEditorMount}
         />
