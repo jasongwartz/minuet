@@ -6,8 +6,10 @@ import type * as Tone from 'tone'
 
 import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
+/* eslint-disable import/no-unresolved */
 import defaultPkl from './default_pkl.txt?raw'
 import defaultTs from './default_ts.txt?raw'
+/* eslint-enable import/no-unresolved */
 import Editor, { type EditorLanguage } from './Editor'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -29,8 +31,10 @@ const App = () => {
         setIsLoading(false)
         setEngine(new Engine(Object.fromEntries(players.map((p) => [p.name, p.player]))))
       })
+      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
       .catch(console.error)
   }, [])
+
   const samplesRef = useRef(samples)
   const engineRef = useRef(engineState)
 
@@ -54,6 +58,7 @@ const App = () => {
 
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
       if (engineRef.current) {
+        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
         execFromEditor(engineRef.current, editor.getValue(), editorLanguage).catch(console.error)
       }
     })
@@ -66,11 +71,11 @@ const App = () => {
       <div>
         {Object.entries(samples).map((sample) => (
           <button
-            onClick={() => {
+            onClick={() =>
               sample[1].player.state === 'stopped'
                 ? sample[1].player.toDestination().start(0)
                 : sample[1].player.stop()
-            }}
+            }
           >
             {sample[1].name}
           </button>
