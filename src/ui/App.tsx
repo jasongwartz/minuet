@@ -92,7 +92,9 @@ instruments: Listing<Instrument> = new {
         {Object.entries(samples).map((sample) => (
           <button
             onClick={() => {
-              sample[1].player.toDestination().start(0)
+              sample[1].player.state === 'stopped'
+                ? sample[1].player.toDestination().start(0)
+                : sample[1].player.stop()
             }}
           >
             {sample[1].name}
