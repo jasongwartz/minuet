@@ -35,7 +35,7 @@ export class Engine {
       }
 
       if ('sample' in instrument) {
-        const sample = this.samples[instrument.sample.name]
+        const sample = this.samples[instrument.sample.name] ?? null
         if (!sample) {
           throw new Error('Sample name unknown!')
         }
@@ -131,14 +131,14 @@ export class Engine {
         sample.disconnect()
 
         sample.chain(...effects.map((e) => e.node), Tone.getDestination())
-        const player = sample
+        const player = sample.toDestination()
 
         /*
         // HOW TO IMPLEMENT stretching sample to a whole bar
         console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
         player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
         */
-        if (instrument.sample.stretchTo) {
+        if (player && instrument.sample.stretchTo) {
           player.playbackRate =
             player.buffer.duration / player.toSeconds(instrument.sample.stretchTo)
           console.log(
@@ -160,7 +160,7 @@ export class Engine {
     this.instruments = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
-    this.transport = Tone.Transport
+    this.transport = Tone.getTransport()
     this.transport.bpm.value = 70
     this.webMidi = WM
   }
@@ -169,7 +169,7 @@ export class Engine {
     await Tone.start()
     this.webMidi = await this.webMidi.enable()
     // Tone.Transport.timeSignature = [22, 8]
-    console.log(Tone.Transport.timeSignature)
+    console.log(this.transport.timeSignature)
     this.transport.start()
     this.loop.start(0)
   }

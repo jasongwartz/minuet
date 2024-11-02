@@ -1,0 +1,27 @@
+({
+  instruments: [
+    {
+      sample: {
+        name: '9_Drum_03_85bpm.wav',
+        stretchTo: '4:0:0',
+      },
+      on: ['0'],
+      with: [
+        { name: 'lpf', value: { from: { controller: 1 } } },
+        { name: 'gain', value: { from: { controller: 2 } } },
+      ],
+    },
+    {
+      sample: {
+        name: '7_Drum_01_85bpm.wav',
+        stretchTo: '4:0:0',
+      },
+      on: ['0'],
+      with: [
+        { name: 'hpf', value: { from: { controller: 3 } } },
+        { name: 'hpf', value: { from: { oscillator: 'lfo', period: '2n' } } },
+        { name: 'gain', value: { from: { controller: 4 } } },
+      ],
+    },
+  ],
+})

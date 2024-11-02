@@ -6,6 +6,10 @@ import type * as Tone from 'tone'
 
 import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
+/* eslint-disable import/no-unresolved */
+import defaultPkl from './default_pkl.txt?raw'
+import defaultTs from './default_ts.txt?raw'
+/* eslint-enable import/no-unresolved */
 import Editor, { type EditorLanguage } from './Editor'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -27,8 +31,10 @@ const App = () => {
         setIsLoading(false)
         setEngine(new Engine(Object.fromEntries(players.map((p) => [p.name, p.player]))))
       })
+      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
       .catch(console.error)
   }, [])
+
   const samplesRef = useRef(samples)
   const engineRef = useRef(engineState)
 
@@ -52,6 +58,7 @@ const App = () => {
 
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
       if (engineRef.current) {
+        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
         execFromEditor(engineRef.current, editor.getValue(), editorLanguage).catch(console.error)
       }
     })
@@ -59,43 +66,16 @@ const App = () => {
 
   const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('typescript')
 
-  const defaultValue = `
-({
-  instruments: [
-    {
-      sample: {
-        name: "9_Drum_03_85bpm.wav",
-        stretchTo: "4:0:0"
-      },
-      on: ["0"],
-      with: [
-        { name: "lpf", value: { from: { controller: 1 } } },
-        { name: "gain", value: { from: { controller: 2 } } },
-      ]
-    },
-    {
-      sample: {
-        name: "7_Drum_01_85bpm.wav",
-        stretchTo: "4:0:0"
-      },
-      on: ["0"],
-      with: [
-        { name: "hpf", value: { from: { controller: 3 } } },
-        { name: "gain", value: { from: { controller: 4 } } }
-      ]
-    },
-  ]
-})
-`
-
   return (
     <div>
       <div>
         {Object.entries(samples).map((sample) => (
           <button
-            onClick={() => {
-              sample[1].player.toDestination().start(0)
-            }}
+            onClick={() =>
+              sample[1].player.state === 'stopped'
+                ? sample[1].player.toDestination().start(0)
+                : sample[1].player.stop()
+            }
           >
             {sample[1].name}
           </button>
@@ -127,7 +107,7 @@ const App = () => {
         <h1>Loading</h1>
       ) : (
         <Editor
-          defaultValue={defaultValue}
+          defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
           editorLanguage={editorLanguage}
           onEditorMount={onEditorMount}
         />

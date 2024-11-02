@@ -1,3 +1,4 @@
+/* eslint-disable check-file/filename-naming-convention */
 import './ui/index.css'
 
 import React from 'react'
