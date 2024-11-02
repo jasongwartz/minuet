@@ -33,7 +33,7 @@ export class Engine {
         if (!(instrument.sample.name in this.samples)) {
           throw new Error('Sample name unknown!')
         }
-        const sample = this.samples[instrument.sample.name]
+        const sample = this.samples[instrument.sample.name] ?? null
 
         const effects = instrument.with.map((effect) => {
           switch (effect.name) {
@@ -52,17 +52,17 @@ export class Engine {
 
         // Whatever the previous chain was, disconnect it to avoid duplicate outputs
         // and to allow removing of effects from samples that previously had them.
-        sample.disconnect()
+        sample?.disconnect()
 
-        sample.chain(...effects, Tone.Destination)
-        const player = sample.toDestination()
+        sample?.chain(...effects, Tone.getDestination())
+        const player = sample?.toDestination()
 
         /*
         // HOW TO IMPLEMENT stretching sample to a whole bar
         console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
         player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
         */
-        if (instrument.sample.stretchTo) {
+        if (player && instrument.sample.stretchTo) {
           player.playbackRate =
             player.buffer.duration / player.toSeconds(instrument.sample.stretchTo)
           console.log(
@@ -74,7 +74,7 @@ export class Engine {
           console.log(
             `scheduling ${instrument.sample.name} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`,
           )
-          player.start(time + Tone.Time(note).toSeconds())
+          player?.start(time + Tone.Time(note).toSeconds())
         }
       }
     }
@@ -84,14 +84,14 @@ export class Engine {
     this.instruments = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
-    this.transport = Tone.Transport
+    this.transport = Tone.getTransport()
     this.transport.bpm.value = 70
   }
 
   async start() {
     await Tone.start()
     // Tone.Transport.timeSignature = [22, 8]
-    console.log(Tone.Transport.timeSignature)
+    console.log(this.transport.timeSignature)
     this.transport.start()
     this.loop.start(0)
   }

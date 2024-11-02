@@ -1,6 +1,4 @@
-import type { OnMount } from '@monaco-editor/react'
-import MonacoEditor from '@monaco-editor/react'
-import { loader } from '@monaco-editor/react'
+import MonacoEditor, { loader, type OnMount } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 
 export type EditorLanguage = 'pkl' | 'typescript'

@@ -1,18 +1,19 @@
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-
-import { join } from 'path'
 import { createReadStream } from 'fs'
 import { readdir } from 'fs/promises'
+import { join } from 'path'
+import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
   plugins: [
     react(),
+    tsconfigPaths(),
     {
       name: 'local-samples',
       async configureServer(server) {
         const files = await readdir(join(__dirname, 'public/samples'))
-        server.middlewares.use('/samples/list', async (_, res) => {
+        server.middlewares.use('/samples/list', (_, res) => {
           res.end(
             JSON.stringify(
               files.map((fp) => ({ name: fp, url: `/samples/${encodeURIComponent(fp)}` })),
@@ -20,7 +21,7 @@ export default defineConfig({
           )
         })
         server.middlewares.use((req, res, next) => {
-          if (req.url.includes('/samples') && req.url.endsWith('.wav')) {
+          if (req.url?.includes('/samples') && req.url.endsWith('.wav')) {
             const pathComponents = req.url.split('/')
             const wavFilename = pathComponents[pathComponents.length - 1]
             const filePath = join(__dirname, 'public/samples/', decodeURIComponent(wavFilename))
