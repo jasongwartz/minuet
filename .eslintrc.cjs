@@ -24,13 +24,30 @@ module.exports = {
   ],
   ignorePatterns: ['dist'],
 
+  settings: {
+    'import/resolver': {
+      // Source: https://github.com/import-js/eslint-plugin-import/issues/2765#issuecomment-2143384052
+      typescript: {
+        alwaysTryTypes: true, // always try to resolve types under `<root>@types` directory even it doesn't contain any source code, like `@types/unist`
+        project: __dirname,
+      },
+      node: true,
+    },
+  },
+
   rules: {
     '@typescript-eslint/consistent-type-imports': 'error',
     'simple-import-sort/imports': 'error',
     camelcase: ['error', { properties: 'always' }],
     eqeqeq: ['error', 'always'],
     'prefer-const': 'error',
-    'func-style': ['error', 'expression'],
+    'func-style': [
+      'error',
+      'expression',
+      {
+        overrides: { namedExports: 'ignore' },
+      },
+    ],
 
     '@typescript-eslint/only-throw-error': 'error',
     '@typescript-eslint/switch-exhaustiveness-check': 'error',
@@ -65,6 +82,19 @@ module.exports = {
       extends: ['plugin:@typescript-eslint/disable-type-checked'],
       rules: {
         '@typescript-eslint/no-var-requires': 'off',
+      },
+    },
+    {
+      // shadcn generated components
+      files: ['./src/ui/components/shadcn-ui/**/*.tsx'],
+      rules: {
+        'simple-import-sort/imports': 'off',
+        'check-file/filename-naming-convention': [
+          'error',
+          {
+            '**/*.{jsx,tsx}': 'KEBAB_CASE',
+          },
+        ],
       },
     },
   ],

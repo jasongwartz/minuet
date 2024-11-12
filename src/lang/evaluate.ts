@@ -1,7 +1,7 @@
 import ts from 'typescript'
 
 import type { Engine, OstinatoSchema } from '../ostinato'
-import type { EditorLanguage } from '../ui/Editor'
+import type { EditorLanguage } from '../ui/components/Editor'
 
 export const execFromEditor = async (
   engine: Engine,
