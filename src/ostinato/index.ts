@@ -102,7 +102,7 @@ export class Engine {
               const chunkSize = (max - min) / 127
               console.log('chunksize', chunkSize)
 
-              midiInput!.addListener('controlchange', (event) => {
+              midiInput?.addListener('controlchange', (event) => {
                 console.log(
                   valueFrom.controller,
                   event.controller.number,
