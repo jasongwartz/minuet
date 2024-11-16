@@ -13,6 +13,7 @@ export class Engine {
   loop: Tone.Loop
   transport: TransportClass
   webMidi: typeof WM
+  eachBeat: ((bar: number, beat: number) => void) | undefined
 
   get started() {
     return this.transport.state === 'started'
@@ -22,6 +23,11 @@ export class Engine {
   // during planning (otherwise keep playing what was previously scheduled).
   // That, or schedule everything except the instruments that had errors?
   callback = (time: number) => {
+    Tone.getTransport().scheduleRepeat((repeatTime) => {
+      const currentBeat = Tone.Time(repeatTime).toBarsBeatsSixteenths().split(':')
+      this.eachBeat?.(parseFloat(currentBeat[0] ?? '0'), parseFloat(currentBeat[1] ?? '0'))
+    }, '4n')
+
     for (const instrument of this.instruments) {
       console.log('processing instrument', instrument)
       if ('synth' in instrument) {
@@ -138,7 +144,7 @@ export class Engine {
         console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
         player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
         */
-        if (player && instrument.sample.stretchTo) {
+        if (instrument.sample.stretchTo) {
           player.playbackRate =
             player.buffer.duration / player.toSeconds(instrument.sample.stretchTo)
           console.log(
@@ -156,13 +162,14 @@ export class Engine {
     }
   }
 
-  constructor(samples: Record<string, Tone.Player>) {
+  constructor(samples: Record<string, Tone.Player>, eachBeat?: typeof this.eachBeat) {
     this.instruments = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
     this.transport = Tone.getTransport()
     this.transport.bpm.value = 70
     this.webMidi = WM
+    this.eachBeat = eachBeat
   }
 
   async start() {

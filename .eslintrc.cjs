@@ -25,13 +25,26 @@ module.exports = {
   ],
   ignorePatterns: ['dist'],
 
+  settings: {
+    'import/resolver': {
+      // Source: https://github.com/import-js/eslint-plugin-import/issues/2765#issuecomment-2143384052
+      typescript: {
+        project: __dirname,
+      },
+      node: true,
+    },
+  },
+
   rules: {
     '@typescript-eslint/consistent-type-imports': 'error',
     'simple-import-sort/imports': 'error',
     camelcase: ['error', { properties: 'always' }],
     eqeqeq: ['error', 'always'],
     'prefer-const': 'error',
-    'func-style': ['error', 'expression'],
+
+    'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
+    // TODO: Add additional config `overrides: { namedExports: 'ignore' }` based on https://eslint.org/docs/latest/rules/func-style
+    // after upgrading to eslint 9+, so that eslint will prefer arrow functions but still allow named function exports.
 
     '@typescript-eslint/only-throw-error': 'error',
     '@typescript-eslint/switch-exhaustiveness-check': 'error',
@@ -66,6 +79,18 @@ module.exports = {
       extends: ['plugin:@typescript-eslint/disable-type-checked'],
       rules: {
         '@typescript-eslint/no-var-requires': 'off',
+      },
+    },
+    {
+      // shadcn generated components
+      files: ['./src/ui/components/shadcn-ui/**/*.{ts,tsx}'],
+      rules: {
+        'check-file/filename-naming-convention': [
+          'error',
+          {
+            '**/*.{jsx,tsx}': 'KEBAB_CASE',
+          },
+        ],
       },
     },
   ],
