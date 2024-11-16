@@ -1,4 +1,4 @@
-import ts from 'typescript'
+import { transpile } from 'typescript'
 
 import type { Engine, OstinatoSchema } from '../ostinato'
 import type { EditorLanguage } from '../ui/components/Editor'
@@ -24,7 +24,7 @@ export const execFromEditor = async (
     // TODO: Validate parsed instead of assertion
     evaluatedOutput = JSON.parse((respJson as { output: string }).output) as OstinatoSchema
   } else {
-    const transpiled = ts.transpile(contents)
+    const transpiled = transpile(contents)
     console.log('TypeScript transpilation took', Date.now() - start)
 
     // TODO: Validate parsed instead of assertion
