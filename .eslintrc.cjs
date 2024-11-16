@@ -28,7 +28,6 @@ module.exports = {
     'import/resolver': {
       // Source: https://github.com/import-js/eslint-plugin-import/issues/2765#issuecomment-2143384052
       typescript: {
-        alwaysTryTypes: true, // always try to resolve types under `<root>@types` directory even it doesn't contain any source code, like `@types/unist`
         project: __dirname,
       },
       node: true,
