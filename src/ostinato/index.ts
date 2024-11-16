@@ -39,7 +39,7 @@ export class Engine {
         console.log('of type sample')
         console.log(this.samples)
         if (!(instrument.sample.name in this.samples)) {
-          throw new Error('Sample name unknown!')
+          throw new Error(`Sample name "${instrument.sample.name}" unknown!`)
         }
         const sample = this.samples[instrument.sample.name] ?? null
 

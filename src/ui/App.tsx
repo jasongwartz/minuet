@@ -16,10 +16,9 @@ import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
 import { SidebarProvider } from './components/shadcn-ui/sidebar'
 import { SamplesSidebar } from './components/SamplesSidebar'
+import { LiveSidebar } from './components/LiveSidebar'
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(false)
-
   const [samples, setSamples] = useState([] as (SampleDetails & { player?: Tone.Player })[])
   const [engineState, setEngine] = useState<Engine | null>(null)
   const [progressBarValue, setProgressBarValue] = useState(0)
@@ -34,12 +33,10 @@ const App = () => {
             const amended = samples
             amended[index] = loaded
             setSamples(amended)
-            console.log(samples)
           }),
         )
       })
       .then(() => {
-        setIsLoading(false)
         setEngine(
           new Engine(
             Object.fromEntries(
@@ -99,37 +96,20 @@ const App = () => {
   return (
     <>
       <SidebarProvider>
-        <SamplesSidebar samples={samples} />
-      </SidebarProvider>
-      <Progress value={progressBarValue} />
-      <div>
-        Pkl
-        <input
-          type='radio'
-          onChange={() => {
-            setEditorLanguage('pkl')
-          }}
-          checked={editorLanguage === 'pkl'}
-        />
-        TypeScript
-        <input
-          type='radio'
-          onChange={() => {
-            setEditorLanguage('typescript')
-          }}
-          checked={editorLanguage === 'typescript'}
-        />
-      </div>
+        <SamplesSidebar samples={samples} onLanguageChange={(lang) => setEditorLanguage(lang)} />
+        <div className='w-screen'>
+          <div className='p-4 flex justify-center'>
+            <Progress value={progressBarValue} className='w-[90%]' />
+          </div>
 
-      {isLoading ? (
-        <h1>Loading</h1>
-      ) : (
-        <Editor
-          defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
-          editorLanguage={editorLanguage}
-          onEditorMount={onEditorMount}
-        />
-      )}
+          <Editor
+            defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
+            editorLanguage={editorLanguage}
+            onEditorMount={onEditorMount}
+          />
+        </div>
+        <LiveSidebar />
+      </SidebarProvider>
     </>
   )
 }
