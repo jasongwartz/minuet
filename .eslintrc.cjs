@@ -41,13 +41,10 @@ module.exports = {
     camelcase: ['error', { properties: 'always' }],
     eqeqeq: ['error', 'always'],
     'prefer-const': 'error',
-    'func-style': [
-      'error',
-      'expression',
-      {
-        overrides: { namedExports: 'ignore' },
-      },
-    ],
+
+    'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
+    // TODO: Add additional config `overrides: { namedExports: 'ignore' }` based on https://eslint.org/docs/latest/rules/func-style
+    // after upgrading to eslint 9+, so that eslint will prefer arrow functions but still allow named function exports.
 
     '@typescript-eslint/only-throw-error': 'error',
     '@typescript-eslint/switch-exhaustiveness-check': 'error',
@@ -86,9 +83,8 @@ module.exports = {
     },
     {
       // shadcn generated components
-      files: ['./src/ui/components/shadcn-ui/**/*.tsx'],
+      files: ['./src/ui/components/shadcn-ui/**/*.{ts,tsx}'],
       rules: {
-        'simple-import-sort/imports': 'off',
         'check-file/filename-naming-convention': [
           'error',
           {

@@ -7,16 +7,14 @@ import type * as Tone from 'tone'
 import { execFromEditor } from '../lang/evaluate'
 import { Engine } from '../ostinato'
 import Editor, { type EditorLanguage } from './components/Editor'
+import { LiveSidebar } from './components/LiveSidebar'
+import { SamplesSidebar } from './components/SamplesSidebar'
 import { Progress } from './components/shadcn-ui/progress'
-/* eslint-disable import/no-unresolved */
+import { SidebarProvider } from './components/shadcn-ui/sidebar'
 import defaultPkl from './default_pkl.txt?raw'
 import defaultTs from './default_ts.txt?raw'
-/* eslint-enable import/no-unresolved */
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
-import { SidebarProvider } from './components/shadcn-ui/sidebar'
-import { SamplesSidebar } from './components/SamplesSidebar'
-import { LiveSidebar } from './components/LiveSidebar'
 
 const App = () => {
   const [samples, setSamples] = useState([] as (SampleDetails & { player?: Tone.Player })[])
@@ -43,7 +41,7 @@ const App = () => {
               Object.entries(samples)
                 .filter(
                   (entry): entry is [string, SampleDetails & { player: Tone.Player }] =>
-                    !!entry[1]?.player,
+                    !!entry[1].player,
                 )
                 .map((entry) => [entry[0], entry[1].player]),
             ),
@@ -96,7 +94,12 @@ const App = () => {
   return (
     <>
       <SidebarProvider>
-        <SamplesSidebar samples={samples} onLanguageChange={(lang) => setEditorLanguage(lang)} />
+        <SamplesSidebar
+          samples={samples}
+          onLanguageChange={(lang) => {
+            setEditorLanguage(lang)
+          }}
+        />
         <div className='w-screen'>
           <div className='p-4 flex justify-center'>
             <Progress value={progressBarValue} className='w-[90%]' />

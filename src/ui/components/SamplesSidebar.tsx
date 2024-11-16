@@ -1,5 +1,17 @@
 import { ChevronDown, Music } from 'lucide-react'
+import type * as Tone from 'tone'
+
+import type { SampleDetails } from '../load_samples'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from './shadcn-ui/select'
 import {
   Sidebar,
   SidebarContent,
@@ -13,17 +25,6 @@ import {
   SidebarMenuSkeleton,
   SidebarRail,
 } from './shadcn-ui/sidebar'
-import { SampleDetails } from '../load_samples'
-import * as Tone from 'tone'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from './shadcn-ui/select'
 
 export function SamplesSidebar({
   samples,
@@ -53,7 +54,9 @@ export function SamplesSidebar({
           <SidebarMenuItem>
             <Select
               defaultValue='typescript'
-              onValueChange={(value: 'pkl' | 'typescript') => onLanguageChange(value)}
+              onValueChange={(value: 'pkl' | 'typescript') => {
+                onLanguageChange(value)
+              }}
             >
               <SelectTrigger className='w-[180px]'>
                 <SelectValue />
