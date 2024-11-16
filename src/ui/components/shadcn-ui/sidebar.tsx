@@ -1,12 +1,13 @@
-import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { VariantProps, cva } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
+import { cva } from 'class-variance-authority'
 import { PanelLeft } from 'lucide-react'
+import * as React from 'react'
 
-import { useIsMobile } from '@/src/ui/components/shadcn-ui/hooks/use-mobile'
-import { cn } from '@/src/ui/components/shadcn-ui/lib/utils'
 import { Button } from '@/src/ui/components/shadcn-ui/button'
+import { useIsMobile } from '@/src/ui/components/shadcn-ui/hooks/use-mobile'
 import { Input } from '@/src/ui/components/shadcn-ui/input'
+import { cn } from '@/src/ui/components/shadcn-ui/lib/utils'
 import { Separator } from '@/src/ui/components/shadcn-ui/separator'
 import { Sheet, SheetContent } from '@/src/ui/components/shadcn-ui/sheet'
 import { Skeleton } from '@/src/ui/components/shadcn-ui/skeleton'
@@ -24,7 +25,7 @@ const SIDEBAR_WIDTH_MOBILE = '18rem'
 const SIDEBAR_WIDTH_ICON = '3rem'
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 
-type SidebarContext = {
+interface SidebarContext {
   state: 'expanded' | 'collapsed'
   open: boolean
   setOpen: (open: boolean) => void
@@ -89,7 +90,8 @@ const SidebarProvider = React.forwardRef<
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
-      return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
     }, [isMobile, setOpen, setOpenMobile])
 
     // Adds a keyboard shortcut to toggle the sidebar.
@@ -102,7 +104,9 @@ const SidebarProvider = React.forwardRef<
       }
 
       window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown)
+      }
     }, [toggleSidebar])
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
