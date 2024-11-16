@@ -5,8 +5,6 @@ import type { Instrument, OstinatoSchema } from './schema'
 
 export type { Instrument, OstinatoSchema }
 
-window.Tone = Tone
-
 export class Engine {
   samples: Record<string, Tone.Player>
   instruments: Instrument[]
@@ -21,7 +19,7 @@ export class Engine {
   callback = (time: number) => {
     Tone.getTransport().scheduleRepeat((repeatTime) => {
       const currentBeat = Tone.Time(repeatTime).toBarsBeatsSixteenths().split(':')
-      this.eachBeat(parseFloat(currentBeat[0]), parseFloat(currentBeat[1]))
+      this.eachBeat?.(parseFloat(currentBeat[0] ?? '0'), parseFloat(currentBeat[1] ?? '0'))
     }, '4n')
 
     for (const instrument of this.instruments) {
