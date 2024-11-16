@@ -1,7 +1,5 @@
-/* eslint-disable import/no-unresolved */
 import wasmURL from '@ffmpeg/core/wasm?url'
 import coreURL from '@ffmpeg/core?url'
-/* eslint-enable import/no-unresolved */
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
 import * as Tone from 'tone'

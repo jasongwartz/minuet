@@ -14,16 +14,13 @@ export default function Editor(props: EditorProps) {
 
   return (
     <MonacoEditor
-      height='60vh'
-      width='60vw'
-      className='jason'
+      height='100vh'
       language={
         props.editorLanguage === 'typescript' ? 'typescript' : 'python' /* TODO: pkl? groovy? */
       }
       defaultValue={props.defaultValue}
-      // onChange={handleEditorChange}
       onMount={props.onEditorMount}
-      options={{ minimap: { enabled: false } }}
+      options={{ minimap: { enabled: false }, scrollBeyondLastLine: false }}
     />
   )
 }

@@ -10,12 +10,18 @@ export class Engine {
   instruments: Instrument[]
   loop: Tone.Loop
   transport: TransportClass
+  eachBeat: ((bar: number, beat: number) => void) | undefined
 
   get started() {
     return this.transport.state === 'started'
   }
 
   callback = (time: number) => {
+    Tone.getTransport().scheduleRepeat((repeatTime) => {
+      const currentBeat = Tone.Time(repeatTime).toBarsBeatsSixteenths().split(':')
+      this.eachBeat?.(parseFloat(currentBeat[0] ?? '0'), parseFloat(currentBeat[1] ?? '0'))
+    }, '4n')
+
     for (const instrument of this.instruments) {
       if ('synth' in instrument) {
         const synth =
@@ -31,7 +37,7 @@ export class Engine {
         console.log('of type sample')
         console.log(this.samples)
         if (!(instrument.sample.name in this.samples)) {
-          throw new Error('Sample name unknown!')
+          throw new Error(`Sample name "${instrument.sample.name}" unknown!`)
         }
         const sample = this.samples[instrument.sample.name] ?? null
 
@@ -80,12 +86,13 @@ export class Engine {
     }
   }
 
-  constructor(samples: Record<string, Tone.Player>) {
+  constructor(samples: Record<string, Tone.Player>, eachBeat?: typeof this.eachBeat) {
     this.instruments = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
     this.transport = Tone.getTransport()
     this.transport.bpm.value = 70
+    this.eachBeat = eachBeat
   }
 
   async start() {
