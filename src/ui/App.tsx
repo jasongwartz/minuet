@@ -11,6 +11,7 @@ import { LiveSidebar } from './components/LiveSidebar'
 import { SamplesSidebar } from './components/SamplesSidebar'
 import { Progress } from './components/shadcn-ui/progress'
 import { SidebarProvider } from './components/shadcn-ui/sidebar'
+import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
 import defaultTs from './default_ts.txt?raw'
 import { getSamples, type SampleDetails } from './load_samples'
@@ -113,6 +114,7 @@ const App = () => {
         </div>
         <LiveSidebar />
       </SidebarProvider>
+      <Toaster />
     </>
   )
 }

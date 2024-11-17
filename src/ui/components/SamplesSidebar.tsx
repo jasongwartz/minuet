@@ -3,6 +3,7 @@ import type * as Tone from 'tone'
 
 import type { SampleDetails } from '../load_samples'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
+import { useToast } from './shadcn-ui/hooks/use-toast'
 import {
   Select,
   SelectContent,
@@ -33,12 +34,21 @@ export function SamplesSidebar({
   samples: (SampleDetails & { player?: Tone.Player })[]
   onLanguageChange: (value: 'pkl' | 'typescript') => void
 }) {
+  const { toast } = useToast()
   return (
-    <Sidebar>
+    <Sidebar variant='floating'>
       <SidebarHeader>
         <SidebarMenuButton
           size='lg'
           className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+          onClick={() => {
+            navigator.clipboard
+              .writeText(window.location.href)
+              .then(() => toast({ description: 'URL copied to clipboard' }))
+              .catch(() =>
+                toast({ description: 'Unable to copy URL to clipboard', variant: 'destructive' }),
+              )
+          }}
         >
           <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
             <Music className='size-4' />
