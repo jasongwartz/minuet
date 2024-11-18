@@ -25,6 +25,7 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarRail,
+  SidebarSeparator,
 } from './shadcn-ui/sidebar'
 
 export function SamplesSidebar({
@@ -58,34 +59,38 @@ export function SamplesSidebar({
           </div>
         </SidebarMenuButton>
       </SidebarHeader>
+      <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Editor Language</SidebarGroupLabel>
-          <SidebarMenuItem>
-            <Select
-              defaultValue='typescript'
-              onValueChange={(value: 'pkl' | 'typescript') => {
-                onLanguageChange(value)
-              }}
-            >
-              <SelectTrigger className='w-[180px]'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Editor Language</SelectLabel>
-                  <SelectItem value='typescript'>TypeScript</SelectItem>
-                  <SelectItem value='pkl'>Pkl</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </SidebarMenuItem>
+          <SidebarGroupContent>
+            <SidebarMenuItem>
+              <Select
+                defaultValue='typescript'
+                onValueChange={(value: 'pkl' | 'typescript') => {
+                  onLanguageChange(value)
+                }}
+              >
+                <SelectTrigger className='w-[180px]'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Editor Language</SelectLabel>
+                    <SelectItem value='typescript'>TypeScript</SelectItem>
+                    <SelectItem value='pkl'>Pkl</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </SidebarMenuItem>
+          </SidebarGroupContent>
         </SidebarGroup>
+        <SidebarSeparator />
         <Collapsible defaultOpen className='group/collapsible'>
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger>
-                Samples
+                Samples ({samples.length})
                 <ChevronDown className='ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180' />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
