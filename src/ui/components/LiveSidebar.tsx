@@ -1,14 +1,6 @@
 import { getDestination } from 'tone'
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from './shadcn-ui/card'
-import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
