@@ -44,7 +44,7 @@ const App = () => {
                   (entry): entry is [string, SampleDetails & { player: Tone.Player }] =>
                     !!entry[1].player,
                 )
-                .map((entry) => [entry[0], entry[1].player]),
+                .map((entry) => [entry[1].name, entry[1].player]),
             ),
             (bar, beat) => {
               const phraseLengthInBars = 4
