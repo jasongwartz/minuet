@@ -24,7 +24,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
-  SidebarRail,
   SidebarSeparator,
 } from './shadcn-ui/sidebar'
 
@@ -106,6 +105,20 @@ export function SamplesSidebar({
                               ? player.toDestination().start(0)
                               : player.stop()
                           }
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            navigator.clipboard
+                              .writeText(name)
+                              .then(() =>
+                                toast({ description: `Sample name "${name}" copied to clipboard` }),
+                              )
+                              .catch(() =>
+                                toast({
+                                  description: 'Unable to copy sample name to clipboard',
+                                  variant: 'destructive',
+                                }),
+                              )
+                          }}
                         >
                           {name}
                         </SidebarMenuButton>
@@ -120,7 +133,6 @@ export function SamplesSidebar({
           </SidebarGroup>
         </Collapsible>
       </SidebarContent>
-      <SidebarRail />
     </Sidebar>
   )
 }

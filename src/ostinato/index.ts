@@ -5,24 +5,50 @@ import type { Instrument, OstinatoSchema } from './schema'
 
 export type { Instrument, OstinatoSchema }
 
+export interface Track {
+  config: Instrument
+  node?: Tone.ToneAudioNode
+}
+
+interface Events {
+  onEachBeat?: ((phrase: number, bar: number, beat: number) => void) | undefined
+  onSchedulingStart?: () => void
+  onSchedulingComplete?: (duration: number) => void
+}
+
 export class Engine {
   samples: Record<string, Tone.Player>
-  instruments: Instrument[]
+  tracks: Track[]
+  config?: OstinatoSchema
   loop: Tone.Loop
   transport: TransportClass
-  eachBeat: ((bar: number, beat: number) => void) | undefined
+  events?: Events
+  phrase = 0
 
   get started() {
     return this.transport.state === 'started'
   }
 
   callback = (time: number) => {
+    const start = Date.now()
+    this.phrase += 1
+    this.events?.onSchedulingStart?.()
     Tone.getTransport().scheduleRepeat((repeatTime) => {
       const currentBeat = Tone.Time(repeatTime).toBarsBeatsSixteenths().split(':')
-      this.eachBeat?.(parseFloat(currentBeat[0] ?? '0'), parseFloat(currentBeat[1] ?? '0'))
+      this.events?.onEachBeat?.(
+        this.phrase,
+        parseFloat(currentBeat[0] ?? '0'),
+        parseFloat(currentBeat[1] ?? '0'),
+      )
     }, '4n')
 
-    for (const instrument of this.instruments) {
+    if (this.config?.bpm) {
+      this.transport.bpm.value = this.config.bpm
+    }
+
+    const newTracks = []
+
+    for (const instrument of this.config?.instruments ?? []) {
       if ('synth' in instrument) {
         const synth =
           instrument.synth === 'FMSynth'
@@ -31,13 +57,11 @@ export class Engine {
         for (const note of instrument.on.sort()) {
           synth.triggerAttackRelease('C4', '8n', time + Tone.Time(note).toSeconds())
         }
-      }
-      console.log('processing instrument', instrument)
-      if ('sample' in instrument) {
-        console.log('of type sample')
-        console.log(this.samples)
+      } else {
         if (!(instrument.sample.name in this.samples)) {
-          throw new Error(`Sample name "${instrument.sample.name}" unknown!`)
+          throw new Error(
+            `Sample name "${instrument.sample.name}" unknown! Sample names available: ${Object.keys(this.samples).join(', ')}`,
+          )
         }
         const sample = this.samples[instrument.sample.name] ?? null
 
@@ -50,18 +74,13 @@ export class Engine {
           }
         })
 
-        console.log(
-          instrument.sample,
-          'chain: ',
-          effects.map((e) => e.name),
-        )
-
         // Whatever the previous chain was, disconnect it to avoid duplicate outputs
         // and to allow removing of effects from samples that previously had them.
         sample?.disconnect()
 
         sample?.chain(...effects, Tone.getDestination())
         const player = sample?.toDestination()
+        newTracks.push({ config: instrument, node: sample ?? undefined })
 
         /*
         // HOW TO IMPLEMENT stretching sample to a whole bar
@@ -84,21 +103,23 @@ export class Engine {
         }
       }
     }
+
+    this.tracks = newTracks
+    this.events?.onSchedulingComplete?.(Date.now() - start)
   }
 
-  constructor(samples: Record<string, Tone.Player>, eachBeat?: typeof this.eachBeat) {
-    this.instruments = []
+  constructor(samples: Record<string, Tone.Player>, events?: Events) {
+    this.tracks = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
     this.transport = Tone.getTransport()
     this.transport.bpm.value = 70
-    this.eachBeat = eachBeat
+    this.events = events
   }
 
   async start() {
     await Tone.start()
     // Tone.Transport.timeSignature = [22, 8]
-    console.log(this.transport.timeSignature)
     this.transport.start()
     this.loop.start(0)
   }
