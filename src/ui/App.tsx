@@ -1,7 +1,7 @@
 import './App.css'
 
 import type { OnMount } from '@monaco-editor/react'
-import { Activity, Code, SquareChevronRight, Terminal } from 'lucide-react'
+import { Activity, Terminal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 
