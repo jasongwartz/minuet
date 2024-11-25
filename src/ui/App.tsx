@@ -12,6 +12,7 @@ import Editor, { type EditorLanguage } from './components/Editor'
 import { LiveSidebar } from './components/LiveSidebar'
 import { SamplesSidebar } from './components/SamplesSidebar'
 import { Badge } from './components/shadcn-ui/badge'
+import { useToast } from './components/shadcn-ui/hooks/use-toast'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './components/shadcn-ui/hover-card'
 import { cn } from './components/shadcn-ui/lib/utils'
 import { Progress } from './components/shadcn-ui/progress'
@@ -44,6 +45,7 @@ const App = () => {
     colour: 'bg-gray-200',
     text: null,
   })
+  const { toast } = useToast()
 
   useEffect(() => {
     getSamples()
@@ -136,6 +138,11 @@ const App = () => {
               text: `${Date.now() - start}ms`,
             })
             console.error(err)
+            toast({
+              title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
+              description: err instanceof Error ? err.message : 'Unknown error',
+              variant: 'destructive',
+            })
           })
       }
     }
