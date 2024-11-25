@@ -253,7 +253,7 @@ const App = () => {
             onEditorMount={onEditorMount}
           />
         </div>
-        <LiveSidebar tracks={trackNodes} phrase={progressBarValue.phrase} />
+        <LiveSidebar tracks={trackNodes} phrase={progressBarValue.phrase} webmidi={engineRef.current?.webMidi} />
       </SidebarProvider>
       <Toaster />
     </>

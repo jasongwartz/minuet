@@ -7,8 +7,8 @@
       },
       on: ['0'],
       with: [
-        { name: 'lpf', value: { from: { controller: 1 } } },
-        { name: 'gain', value: { from: { controller: 2 } } },
+        { name: 'lpf', value: { from: { input: 2, controller: 16 } } },
+        { name: 'gain', value: { from: { input: 2, controller: 0 } } },
       ],
     },
     {
@@ -18,9 +18,8 @@
       },
       on: ['0'],
       with: [
-        { name: 'hpf', value: { from: { controller: 3 } } },
-        { name: 'hpf', value: { from: { oscillator: 'lfo', period: '2n' } } },
-        { name: 'gain', value: { from: { controller: 4 } } },
+        { name: 'lpf', value: { from: { input: 2, controller: 17 } } },
+        { name: 'gain', value: { from: { input: 2, controller: 1 } } },
       ],
     },
   ],

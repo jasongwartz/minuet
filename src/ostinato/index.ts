@@ -83,7 +83,7 @@ export class Engine {
               console.log('inputs length', this.webMidi.inputs.length)
               if (this.webMidi.inputs.length === 1) {
                 midiInputNumber = 0
-              } else if ('input' in valueFrom && valueFrom.input) {
+              } else if ('input' in valueFrom && valueFrom.input !== undefined) {
                 midiInputNumber = valueFrom.input
               } else {
                 throw new Error('from.input is required when more than 1 MIDI device is connected')
@@ -128,11 +128,6 @@ export class Engine {
               console.log('chunksize', chunkSize)
 
               midiInput?.addListener('controlchange', (event) => {
-                console.log(
-                  valueFrom.controller,
-                  event.controller.number,
-                  valueFrom.controller === event.controller.number,
-                )
                 if (valueFrom.controller === event.controller.number) {
                   e.update((event.rawValue ?? 0) * chunkSize + min)
                 }
@@ -156,9 +151,6 @@ export class Engine {
         sample?.disconnect()
 
         sample?.chain(...effects.map((e) => e.node), Tone.getDestination())
-
-        const player = sample?.toDestination()
-
         newTracks.push({ config: instrument, node: sample ?? undefined })
 
         /*
@@ -166,11 +158,11 @@ export class Engine {
         console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
         player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
         */
-        if (player && instrument.sample.stretchTo) {
-          player.playbackRate =
-            player.buffer.duration / player.toSeconds(instrument.sample.stretchTo)
+        if (sample && instrument.sample.stretchTo) {
+          sample.playbackRate =
+            sample.buffer.duration / sample.toSeconds(instrument.sample.stretchTo)
           console.log(
-            `Set player playback rate to ${player.playbackRate} (to fit buffer duration ${player.buffer.duration} into time ${instrument.sample.stretchTo}, which is ${player.toSeconds(instrument.sample.stretchTo)} seconds)`,
+            `Set player playback rate to ${sample.playbackRate} (to fit buffer duration ${sample.buffer.duration} into time ${instrument.sample.stretchTo}, which is ${sample.toSeconds(instrument.sample.stretchTo)} seconds)`,
           )
         }
 
@@ -178,7 +170,7 @@ export class Engine {
           console.log(
             `scheduling ${instrument.sample.name} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`,
           )
-          player?.start(time + Tone.Time(note).toSeconds())
+          sample?.start(time + Tone.Time(note).toSeconds())
         }
       }
     }
