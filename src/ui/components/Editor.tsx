@@ -30,7 +30,7 @@ export default function Editor(props: EditorProps) {
       }
       defaultValue={props.defaultValue}
       onMount={props.onEditorMount}
-      options={{ minimap: { enabled: false }, scrollBeyondLastLine: false }}
+      options={{ minimap: { enabled: false }, scrollBeyondLastLine: false, contextmenu: false }}
     />
   )
 }
