@@ -113,29 +113,16 @@ const App = () => {
   })
 
   const onEditorMount: OnMount = (editor, monaco) => {
-    monaco.editor.defineTheme('custom', {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#ffffff', //'#000000',
-      },
-    })
-    monaco.editor.setTheme('custom')
+    monaco.editor.setTheme('vs-light')
 
-    // editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
-    //   if (engineRef.current) {
-    //     // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-    //     execFromEditor(engineRef.current, editor.getValue(), editorLanguage).catch(console.error)
-    //   }
-    // })
-    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Backslash, () => {
+    const evaluateEditorCallback = () => {
       if (engineRef.current) {
         const start = Date.now()
         setEvaluatingStatusIndicatorColour({ colour: 'bg-green-500', text: '...' })
         // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
         execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
-          .then(() => {
+          .then(async () => {
+            await editor.getAction('editor.action.formatDocument')?.run()
             setTimeout(() => {
               setEvaluatingStatusIndicatorColour({
                 colour: 'bg-gray-200',
@@ -151,7 +138,9 @@ const App = () => {
             console.error(err)
           })
       }
-    })
+    }
+    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, evaluateEditorCallback)
+    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Backslash, evaluateEditorCallback)
   }
 
   const [trackNodes, setTrackNodes] = useState<Track[]>([])
