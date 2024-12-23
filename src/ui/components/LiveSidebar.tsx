@@ -44,7 +44,11 @@ export function LiveSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>{webmidi !== undefined && <MidiDebugCard webmidi={webmidi} />}</SidebarFooter>
+      <SidebarFooter>
+        {webmidi !== undefined && webmidi.inputs.length !== 0 && (
+          <MidiDebugCard webmidi={webmidi} />
+        )}
+      </SidebarFooter>
     </Sidebar>
   )
 }
