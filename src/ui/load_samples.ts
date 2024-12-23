@@ -17,48 +17,47 @@ export const loadSample = async (sample: SampleDetails) => {
   console.log(`loading: ${sample.name}`)
   const player = new Tone.Player()
 
-  if (sample.url.endsWith('caf')) {
-    await player.load(await convertCafToMp3(sample))
+  // TODO: Dexie supports reactivity - move some of this fetch logic to
+  // the Sidebar component.
+  const cached = await db.samples.where('url').equals(sample.url).first()
+  let blob: Blob
+  if (cached) {
+    blob = cached.blob
   } else {
-    const cached = await db.samples.where('url').equals(sample.url).first()
-    let blob: Blob
-    if (cached) {
-      blob = cached.blob
-    } else {
-      const response = await fetch(sample.url)
-      blob = await response.blob()
-      await db.samples.put({
-        name: sample.name,
-        url: sample.url,
-        blob,
-      })
-    }
-    await player.load(URL.createObjectURL(blob))
+    const response = await fetch(sample.url)
+    blob = await response.blob()
+    await db.samples.put({
+      name: sample.name,
+      url: sample.url,
+      blob,
+    })
+  }
+  const blobUrl = URL.createObjectURL(blob)
+
+  if (sample.url.endsWith('caf')) {
+    await player.load(await convertCafToMp3(sample.name, blobUrl))
+  } else {
+    await player.load(blobUrl)
   }
 
-  // TODO: Instead of loading directly from URL, pull binary first,
-  // and read-through cache in IndexedDB (browser storage for blobs)
   console.log(`loaded: ${sample.name}`)
-
   return { ...sample, player }
 }
 
-const ffmpeg = (async () => {
-  const ffmpeg = new FFmpeg()
-  await ffmpeg.load({
-    coreURL,
-    wasmURL,
-  })
-  return ffmpeg
-})()
+let ffmpeg: FFmpeg | null = null
 
-const convertCafToMp3 = async (sample: SampleDetails) => {
-  const ff = await ffmpeg
+const convertCafToMp3 = async (name: string, url: string) => {
+  if (ffmpeg === null) {
+    ffmpeg = new FFmpeg()
+    await ffmpeg.load({
+      coreURL,
+      wasmURL,
+    })
+  }
+  await ffmpeg.writeFile(name, await fetchFile(url))
+  await ffmpeg.exec(['-i', name, name + '.mp3'])
 
-  await ff.writeFile(sample.name, await fetchFile(sample.url))
-  await ff.exec(['-i', sample.name, sample.name + '.mp3'])
-
-  const fileData = await ff.readFile(sample.name + '.mp3')
+  const fileData = await ffmpeg.readFile(name + '.mp3')
 
   return fileData instanceof Uint8Array
     ? URL.createObjectURL(new Blob([fileData.buffer], { type: 'audio/mp3' }))
