@@ -17,7 +17,6 @@ module.exports = {
     'plugin:react-hooks/recommended',
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/strict-type-checked',
-    'plugin:react-hooks/recommended',
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:import/recommended',
     'plugin:import/typescript',
