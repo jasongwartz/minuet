@@ -14,9 +14,8 @@ const db = new Dexie('SamplesDataDb') as Dexie & {
   >
 }
 
-// Schema declaration:
 db.version(1).stores({
-  samples: '++id, name, url', // primary key "id" (for the runtime!)
+  samples: '++id, name, url', // primary key and indexed keys (for the runtime!)
 })
 
 export type { SampleData }
