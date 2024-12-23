@@ -4,6 +4,8 @@ import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
 import * as Tone from 'tone'
 
+import { db } from './idb'
+
 export const getSamples = async () => {
   const metadataResponse = await fetch('/samples/list')
   return (await metadataResponse.json()) as { name: string; url: string }[]
@@ -18,7 +20,20 @@ export const loadSample = async (sample: SampleDetails) => {
   if (sample.url.endsWith('caf')) {
     await player.load(await convertCafToMp3(sample))
   } else {
-    await player.load(sample.url)
+    const cached = await db.samples.where('url').equals(sample.url).first()
+    let blob: Blob
+    if (cached) {
+      blob = cached.blob
+    } else {
+      const response = await fetch(sample.url)
+      blob = await response.blob()
+      await db.samples.put({
+        name: sample.name,
+        url: sample.url,
+        blob,
+      })
+    }
+    await player.load(URL.createObjectURL(blob))
   }
 
   // TODO: Instead of loading directly from URL, pull binary first,
