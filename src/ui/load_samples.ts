@@ -39,6 +39,7 @@ export const loadSample = async (sample: SampleDetails) => {
   } else {
     await player.load(blobUrl)
   }
+  URL.revokeObjectURL(blobUrl)
 
   console.log(`loaded: ${sample.name}`)
   return { ...sample, player }
