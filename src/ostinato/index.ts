@@ -18,6 +18,11 @@ interface Events {
   onSchedulingComplete?: (duration: number) => void
 }
 
+interface PitchCapture {
+  pitch: string
+  velocity: number
+}
+
 export class Engine {
   samples: Record<string, Tone.Player>
   tracks: Track[]
@@ -26,6 +31,7 @@ export class Engine {
   transport: TransportClass
   webMidi: typeof WM
   events?: Events
+  pitchCaptures: PitchCapture[] = []
   phrase = 0
 
   get started() {
@@ -192,6 +198,24 @@ export class Engine {
   async start() {
     await Tone.start()
     this.webMidi = await this.webMidi.enable()
+    this.webMidi.inputs
+      .forEach((i) =>
+        i.addListener('controlchange', (event) => {
+          if (event.subtype === 'damperpedal') {
+            const captured: PitchCapture[] = []
+            i.addListener('noteon', (event) => {
+              captured.push({ pitch: event.note.identifier, velocity: event.note.rawAttack })
+            })
+            const finishedListener = i.addOneTimeListener('controlchange', (event) => {
+              if (event.controller.number === 64 && event.rawValue === 0) {
+                console.log(captured)
+              }
+              i.removeListener('controlchange', finishedListener)
+            })
+          }
+        }),
+      )
+
     // Tone.Transport.timeSignature = [22, 8]
     this.transport.start()
     this.loop.start(0)
