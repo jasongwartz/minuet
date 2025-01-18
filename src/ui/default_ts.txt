@@ -1,27 +1,16 @@
 ({
   instruments: [
     {
-      sample: {
-        name: '9_Drum_03_85bpm.wav',
-        stretchTo: '4:0:0',
-      },
-      on: ['0'],
-      with: [
-        { name: 'lpf', value: { from: { controller: 1 } } },
-        { name: 'gain', value: { from: { controller: 2 } } },
-      ],
+      synth: "FMSynth",
+      on: [{ notes: ["A1", "C2", "E2", "B1"], beat: 0, duration: "8n", every: "8n", mode: "loop", octaveVariance: 1 }],
     },
     {
-      sample: {
-        name: '7_Drum_01_85bpm.wav',
-        stretchTo: '4:0:0',
-      },
-      on: ['0'],
+      synth: "AMSynth",
+      on: [{ notes: ["C5", "B5", "G#5", "F#5"], beat: 0, duration: "64n", every: "32n", mode: "loop", octaveVariance: 3 }],
       with: [
-        { name: 'hpf', value: { from: { controller: 3 } } },
-        { name: 'hpf', value: { from: { oscillator: 'lfo', period: '2n' } } },
-        { name: 'gain', value: { from: { controller: 4 } } },
-      ],
-    },
-  ],
+        { name: "lpf", value: "C3" }
+      ]
+    }
+
+  ]
 })
