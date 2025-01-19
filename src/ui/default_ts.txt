@@ -10,7 +10,14 @@
       with: [
         { name: "lpf", value: "C3" }
       ]
+    },
+    {
+      sample: {
+        name: "9_Drum_03_85bpm.wav",
+        stretchTo: "4:0:0",
+      },
+      on: [0],
+      with: []
     }
-
   ]
 })
