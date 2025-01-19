@@ -72,15 +72,12 @@ export class Engine {
         const sample = this.samples[instrument.sample.name] ?? null
 
         const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
-          console.debug('Processing effect', effect)
-
           let valueFrom: EffectValueFrom['from'] | null
           let midiInputNumber: number | null
 
           if ('value' in effect && typeof effect.value === 'object') {
             valueFrom = effect.value.from
             if ('controller' in valueFrom) {
-              console.log('inputs length', this.webMidi.inputs.length)
               if (this.webMidi.inputs.length === 1) {
                 midiInputNumber = 0
               } else if ('input' in valueFrom && valueFrom.input !== undefined) {
@@ -96,7 +93,6 @@ export class Engine {
             midiInputNumber = null
           }
           const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
-          console.log('midi input selected', midiInput)
 
           const e = new EffectWrapper(effect.name)
 
@@ -138,8 +134,7 @@ export class Engine {
                 Tone.Frequency(valueFrom.min).toFrequency(),
                 Tone.Frequency(valueFrom.max).toFrequency(),
               )
-              // n.connect(osc, node)
-              // DON'T FORGET TO IMPLEMENT connect()
+              e.connect(osc)
               osc.start()
             }
           }
