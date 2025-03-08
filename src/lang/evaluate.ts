@@ -25,19 +25,16 @@ export const execFromEditor = async (
     evaluatedOutput = JSON.parse((respJson as { output: string }).output) as OstinatoSchema
   } else {
     const transpiled = transpile(contents)
-    console.log('TypeScript transpilation took', Date.now() - start)
-
     // TODO: Validate parsed instead of assertion
 
     // Use "indirect eval" for a small amount more safety:
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_direct_eval!
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     evaluatedOutput = eval?.(`"use strict"; ${transpiled}`) as OstinatoSchema
-    console.log('evaluated', evaluatedOutput)
   }
 
   if (Object.keys(engine.samples).length) {
-    engine.instruments = evaluatedOutput.instruments
+    engine.config = evaluatedOutput
     if (!engine.started) {
       await engine.start()
     }
