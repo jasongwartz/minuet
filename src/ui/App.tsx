@@ -119,34 +119,37 @@ const App = () => {
     monaco.editor.setTheme('vs-light')
 
     const evaluateEditorCallback = () => {
-      if (engineRef.current) {
-        const start = Date.now()
-        setEvaluatingStatusIndicatorColour({ colour: 'bg-green-500', text: '...' })
-        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-        execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
-          .then(async () => {
-            await editor.getAction('editor.action.formatDocument')?.run()
-            setTimeout(() => {
-              setEvaluatingStatusIndicatorColour({
-                colour: 'bg-gray-200',
-                text: `${Date.now() - start}ms`,
-              })
-            }, 100)
-          })
-          .catch((err: unknown) => {
+      if (!engineRef.current) {
+        console.log(engineRef)
+        return
+      }
+      const start = Date.now()
+      setEvaluatingStatusIndicatorColour({ colour: 'bg-green-500', text: '...' })
+      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
+      execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
+        .then(async () => {
+          await editor.getAction('editor.action.formatDocument')?.run()
+          setTimeout(() => {
             setEvaluatingStatusIndicatorColour({
-              colour: 'bg-red-500',
+              colour: 'bg-gray-200',
               text: `${Date.now() - start}ms`,
             })
-            console.error(err)
-            toast({
-              title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
-              description: err instanceof Error ? err.message : 'Unknown error',
-              variant: 'destructive',
-            })
+          }, 100)
+        })
+        .catch((err: unknown) => {
+          setEvaluatingStatusIndicatorColour({
+            colour: 'bg-red-500',
+            text: `${Date.now() - start}ms`,
           })
-      }
+          console.error(err)
+          toast({
+            title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
+            description: err instanceof Error ? err.message : 'Unknown error',
+            variant: 'destructive',
+          })
+        })
     }
+
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, evaluateEditorCallback)
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Backslash, evaluateEditorCallback)
   }
