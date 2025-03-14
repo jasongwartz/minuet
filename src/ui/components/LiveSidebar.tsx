@@ -1,19 +1,29 @@
 import type { ToneAudioNode } from 'tone'
 import { getDestination } from 'tone'
+import type { WebMidi } from 'webmidi'
 
 import type { Track } from '@/src/ostinato'
 
+import { MidiDebugCard } from './MidiDebugCard'
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarRail,
 } from './shadcn-ui/sidebar'
 import { SidebarCardVolumeMeter } from './SidebarCardVolumeMeter'
 
-export function LiveSidebar({ tracks, phrase }: { tracks: Track[]; phrase: number }) {
+export function LiveSidebar({
+  tracks,
+  phrase,
+  webmidi,
+}: {
+  tracks: Track[]
+  phrase: number
+  webmidi?: typeof WebMidi
+}) {
   return (
     <Sidebar variant='floating' side='right'>
       <SidebarContent>
@@ -34,7 +44,11 @@ export function LiveSidebar({ tracks, phrase }: { tracks: Track[]; phrase: numbe
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarRail />
+      <SidebarFooter>
+        {webmidi !== undefined && webmidi.inputs.length !== 0 && (
+          <MidiDebugCard webmidi={webmidi} />
+        )}
+      </SidebarFooter>
     </Sidebar>
   )
 }

@@ -20,6 +20,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
+    // Show whole type error.
+    // Disable if tsc gets too slow.
+    "noErrorTruncation": true,
+
     "esModuleInterop": true,
     "incremental": true,
     "noUncheckedIndexedAccess": true,
