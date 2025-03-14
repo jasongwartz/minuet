@@ -55,119 +55,173 @@ export class Engine {
     const newTracks = []
 
     for (const instrument of this.config?.instruments ?? []) {
+      let audioNodeStartOfChain: Tone.ToneAudioNode
+
       if ('synth' in instrument) {
-        const synth =
-          instrument.synth === 'FMSynth'
-            ? new Tone.FMSynth().toDestination()
-            : new Tone.AMSynth().toDestination()
-        for (const note of instrument.on.sort()) {
-          synth.triggerAttackRelease('C4', '8n', time + Tone.Time(note).toSeconds())
+        const synth = instrument.synth === 'FMSynth' ? new Tone.FMSynth() : new Tone.AMSynth()
+        audioNodeStartOfChain = synth
+        for (const playCue of instrument.on.sort((a, b) => {
+          const aBeat = typeof a === 'string' ? a : a.beat
+          const bBeat = typeof b === 'string' ? b : b.beat
+          return Tone.Time(aBeat).toSeconds() - Tone.Time(bBeat).toSeconds()
+        })) {
+          if (typeof playCue === 'string') {
+            synth.triggerAttackRelease('C4', '8n', time + Tone.Time(playCue).toSeconds())
+          } else {
+            if (playCue.mode === 'once') {
+              for (const [index, note] of playCue.notes.entries()) {
+                synth.triggerAttackRelease(
+                  note,
+                  playCue.duration,
+                  time +
+                    Tone.Time(playCue.beat).toSeconds() +
+                    index * Tone.Time(playCue.duration).toSeconds(),
+                )
+              }
+            } else {
+              let timePointer = time
+              let lastNote: string | null = null
+
+              // This function takes a note-string like "C4" and alters the octave
+              // number postfix, so eg `incrementNoteString("C4", 1) returns "C5".
+              const incrementNoteString = (input: string, by: number) => {
+                return input.replace(/(\D+)(\d+)$/, (_, letters: string, number: string) => {
+                  const incrementedNumber = parseInt(number, 10) + by
+                  return letters + incrementedNumber.toString()
+                })
+              }
+
+              const notesWithOctaveVariance = playCue.notes
+                .map((note) => {
+                  const pitches = [note]
+                  for (let i = 1; i < (playCue.octaveVariance ?? 0) + 1; i++) {
+                    pitches.push(incrementNoteString(note, i))
+                    pitches.push(incrementNoteString(note, -i))
+                  }
+                  return pitches.filter((pitch) => Tone.isNote(pitch))
+                })
+                .flat()
+
+              while (timePointer < time + Tone.Time('4m').toSeconds()) {
+                const availableNotes =
+                  lastNote !== null
+                    ? notesWithOctaveVariance.filter((note) => note !== lastNote)
+                    : notesWithOctaveVariance
+
+                const randomIndex = Math.floor(Math.random() * availableNotes.length)
+                // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+                lastNote = availableNotes[randomIndex] as string
+
+                synth.triggerAttackRelease(lastNote, playCue.duration, timePointer)
+                timePointer += Tone.Time(playCue.every).toSeconds()
+              }
+            }
+          }
         }
       } else {
-        if (!(instrument.sample.name in this.samples)) {
+        const sample = this.samples[instrument.sample.name]
+        if (sample === undefined) {
           throw new Error(
             `Sample name "${instrument.sample.name}" unknown! Sample names available: ${Object.keys(this.samples).join(', ')}`,
           )
         }
-        const sample = this.samples[instrument.sample.name] ?? null
-
-        const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
-          let valueFrom: EffectValueFrom['from'] | null
-          let midiInputNumber: number | null
-
-          if ('value' in effect && typeof effect.value === 'object') {
-            valueFrom = effect.value.from
-            if ('controller' in valueFrom) {
-              if (this.webMidi.inputs.length === 1) {
-                midiInputNumber = 0
-              } else if ('input' in valueFrom && valueFrom.input !== undefined) {
-                midiInputNumber = valueFrom.input
-              } else {
-                throw new Error('from.input is required when more than 1 MIDI device is connected')
-              }
-            } else {
-              midiInputNumber = null
-            }
-          } else {
-            valueFrom = null
-            midiInputNumber = null
-          }
-          const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
-
-          const e = new EffectWrapper(effect.name)
-
-          const startValue =
-            'value' in effect
-              ? typeof effect.value === 'number'
-                ? effect.value
-                : typeof effect.value === 'string'
-                  ? Tone.Frequency(effect.value).toFrequency()
-                  : e.default
-              : e.default
-
-          e.update(startValue)
-
-          if (valueFrom) {
-            if ('controller' in valueFrom) {
-              const min = valueFrom.min
-                ? typeof valueFrom.min === 'string'
-                  ? Tone.Frequency(valueFrom.min).toFrequency()
-                  : valueFrom.min
-                : e.min
-              const max = valueFrom.max
-                ? typeof valueFrom.max === 'string'
-                  ? Tone.Frequency(valueFrom.max).toFrequency()
-                  : valueFrom.max
-                : e.max
-
-              const chunkSize = (max - min) / 127
-              console.log('chunksize', chunkSize)
-
-              midiInput?.addListener('controlchange', (event) => {
-                if (valueFrom.controller === event.controller.number) {
-                  e.update((event.rawValue ?? 0) * chunkSize + min)
-                }
-              })
-            } else {
-              const osc = new Tone.LFO(
-                valueFrom.period,
-                Tone.Frequency(valueFrom.min).toFrequency(),
-                Tone.Frequency(valueFrom.max).toFrequency(),
-              )
-              e.connect(osc)
-              osc.start()
-            }
-          }
-          return e
-        })
-
-        // Whatever the previous chain was, disconnect it to avoid duplicate outputs
-        // and to allow removing of effects from samples that previously had them.
-        sample?.disconnect()
-
-        sample?.chain(...effects.map((e) => e.node), Tone.getDestination())
-        newTracks.push({ config: instrument, node: sample ?? undefined })
+        audioNodeStartOfChain = sample
 
         /*
         // HOW TO IMPLEMENT stretching sample to a whole bar
         console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
         player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
         */
-        if (sample && instrument.sample.stretchTo) {
+        if (instrument.sample.stretchTo) {
           sample.playbackRate =
             sample.buffer.duration / sample.toSeconds(instrument.sample.stretchTo)
           console.log(
             `Set player playback rate to ${sample.playbackRate} (to fit buffer duration ${sample.buffer.duration} into time ${instrument.sample.stretchTo}, which is ${sample.toSeconds(instrument.sample.stretchTo)} seconds)`,
           )
         }
-
+        audioNodeStartOfChain = sample
         for (const note of instrument.on.sort()) {
           console.log(
             `scheduling ${instrument.sample.name} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`,
           )
-          sample?.start(time + Tone.Time(note).toSeconds())
+          sample.start(time + Tone.Time(note).toSeconds())
         }
       }
+
+      const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
+        let valueFrom: EffectValueFrom['from'] | null
+        let midiInputNumber: number | null
+
+        if ('value' in effect && typeof effect.value === 'object') {
+          valueFrom = effect.value.from
+          if ('controller' in valueFrom) {
+            if (this.webMidi.inputs.length === 1) {
+              midiInputNumber = 0
+            } else if ('input' in valueFrom && valueFrom.input !== undefined) {
+              midiInputNumber = valueFrom.input
+            } else {
+              throw new Error('from.input is required when more than 1 MIDI device is connected')
+            }
+          } else {
+            midiInputNumber = null
+          }
+        } else {
+          valueFrom = null
+          midiInputNumber = null
+        }
+        const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
+
+        const e = new EffectWrapper(effect.name)
+
+        const startValue =
+          'value' in effect
+            ? typeof effect.value === 'number'
+              ? effect.value
+              : typeof effect.value === 'string'
+                ? Tone.Frequency(effect.value).toFrequency()
+                : e.default
+            : e.default
+
+        e.update(startValue)
+
+        if (valueFrom) {
+          if ('controller' in valueFrom) {
+            const min = valueFrom.min
+              ? typeof valueFrom.min === 'string'
+                ? Tone.Frequency(valueFrom.min).toFrequency()
+                : valueFrom.min
+              : e.min
+            const max = valueFrom.max
+              ? typeof valueFrom.max === 'string'
+                ? Tone.Frequency(valueFrom.max).toFrequency()
+                : valueFrom.max
+              : e.max
+
+            const chunkSize = (max - min) / 127
+
+            midiInput?.addListener('controlchange', (event) => {
+              if (valueFrom.controller === event.controller.number) {
+                e.update((event.rawValue ?? 0) * chunkSize + min)
+              }
+            })
+          } else {
+            const osc = new Tone.LFO(
+              valueFrom.period,
+              Tone.Frequency(valueFrom.min).toFrequency(),
+              Tone.Frequency(valueFrom.max).toFrequency(),
+            )
+            e.connect(osc)
+            osc.start()
+          }
+        }
+        return e
+      })
+
+      // Whatever the previous chain was, disconnect it to avoid duplicate outputs
+      // and to allow removing of effects from samples that previously had them.
+      audioNodeStartOfChain.disconnect()
+      audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
+      newTracks.push({ config: instrument, node: audioNodeStartOfChain })
     }
 
     this.tracks = newTracks

@@ -60,18 +60,32 @@ const zEffectable = z.object({
 const zInstrumentBase = z
   .object({
     id: z.string().optional(),
-    on: z.array(z.string()),
   })
   .merge(zEffectable)
 
 const zSynth = z
   .object({
     synth: z.enum(['FMSynth', 'AMSynth']),
+    on: z.array(
+      z.string().or(
+        z.object({
+          notes: z.array(z.string()),
+          beat: z.string(),
+          duration: z.string(),
+          every: z.string(),
+          mode: z.enum(['once', 'loop']),
+          // pattern: z.enum(['arpeggio', 'sequence']),
+          order: z.enum(['as-written', 'low-to-high', 'random']),
+          octaveVariance: z.number().optional(),
+        }),
+      ),
+    ),
   })
   .merge(zInstrumentBase)
 
 const zSample = z
   .object({
+    on: z.array(z.string()),
     sample: z.object({
       name: z.string(),
       stretchTo: z.string().optional(),
