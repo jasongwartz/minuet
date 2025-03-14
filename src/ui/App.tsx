@@ -45,6 +45,7 @@ const App = () => {
     colour: 'bg-gray-200',
     text: null,
   })
+
   const { toast } = useToast()
 
   useEffect(() => {
@@ -253,7 +254,11 @@ const App = () => {
             onEditorMount={onEditorMount}
           />
         </div>
-        <LiveSidebar tracks={trackNodes} phrase={progressBarValue.phrase} />
+        <LiveSidebar
+          tracks={trackNodes}
+          phrase={progressBarValue.phrase}
+          webmidi={engineRef.current?.webMidi}
+        />
       </SidebarProvider>
       <Toaster />
     </>
