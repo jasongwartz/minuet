@@ -18,6 +18,17 @@ interface Events {
   onSchedulingComplete?: (duration: number) => void
 }
 
+const timeOrderSort = (
+  a: string | number | { beat: string },
+  b: string | number | { beat: string },
+) => {
+  // Sort beats into order:
+  // Tone cannot schedule an event in advance of an already-scheduled event for the same track.
+  const aBeat = typeof a === 'string' || typeof a === 'number' ? a : a.beat
+  const bBeat = typeof b === 'string' || typeof b === 'number' ? b : b.beat
+  return Tone.Time(aBeat).toSeconds() - Tone.Time(bBeat).toSeconds()
+}
+
 export class Engine {
   samples: Record<string, Tone.Player>
   tracks: Track[]
@@ -27,6 +38,8 @@ export class Engine {
   webMidi: typeof WM
   events?: Events
   phrase = 0
+  userMedia: Tone.UserMedia
+  userMediaStreams: { default: Tone.UserMedia } & Record<string, Tone.UserMedia>
 
   get started() {
     return this.transport.state === 'started'
@@ -35,18 +48,44 @@ export class Engine {
   // TODO: pre-collect all the playback, and only schedule if no errors
   // during planning (otherwise keep playing what was previously scheduled).
   // That, or schedule everything except the instruments that had errors?
-  callback = (time: number) => {
+  callback: Tone.LoopOptions['callback'] = (globalClockPhraseStartTime: number) => {
+    // The `time` value passed to the Tone.Loop callback is the
+    // global clock value at the time the callback is scheduling
+    // things for, ie. the time the callback happens plus the lookahead.
+    //
+    // Events on the Transport need to be scheduled using the
+    // transport's "local" elapsed time - otherwise they will occur
+    // delayed, where the delay is the time between the page load
+    // and the transport starting.
+    const transportClockPhraseStartTime = this.transport.getSecondsAtTime(
+      globalClockPhraseStartTime,
+    )
+
     const start = Date.now()
     this.phrase += 1
     this.events?.onSchedulingStart?.()
-    Tone.getTransport().scheduleRepeat((repeatTime) => {
-      const currentBeat = Tone.Time(repeatTime).toBarsBeatsSixteenths().split(':')
-      this.events?.onEachBeat?.(
-        this.phrase,
-        parseFloat(currentBeat[0] ?? '0'),
-        parseFloat(currentBeat[1] ?? '0'),
-      )
-    }, '4n')
+
+    this.transport.scheduleRepeat(
+      (repeatTime) => {
+        // Calculate how many seconds, and therefore how many beats,
+        // will have passed from the phrase start time
+        // until this callback is scheduled to occur.
+        const elapsedTimeSinceStartOfPhrase =
+          this.transport.getSecondsAtTime(repeatTime) - transportClockPhraseStartTime
+        const currentBeat = Tone.Time(elapsedTimeSinceStartOfPhrase)
+          .toBarsBeatsSixteenths()
+          .split(':')
+        Tone.getDraw().schedule(() => {
+          this.events?.onEachBeat?.(
+            this.phrase,
+            parseFloat(currentBeat[0] ?? '0'),
+            parseFloat(currentBeat[1] ?? '0'),
+          )
+        }, repeatTime)
+      },
+      '4n',
+      transportClockPhraseStartTime,
+    )
 
     if (this.config?.bpm) {
       this.transport.bpm.value = this.config.bpm
@@ -58,66 +97,142 @@ export class Engine {
       let audioNodeStartOfChain: Tone.ToneAudioNode
 
       if ('synth' in instrument) {
-        const synth = instrument.synth === 'FMSynth' ? new Tone.FMSynth() : new Tone.AMSynth()
-        audioNodeStartOfChain = synth
-        for (const playCue of instrument.on.sort((a, b) => {
-          const aBeat = typeof a === 'string' ? a : a.beat
-          const bBeat = typeof b === 'string' ? b : b.beat
-          return Tone.Time(aBeat).toSeconds() - Tone.Time(bBeat).toSeconds()
-        })) {
-          if (typeof playCue === 'string') {
-            synth.triggerAttackRelease('C4', '8n', time + Tone.Time(playCue).toSeconds())
+        let schedulePlay: (
+          note: string,
+          duration: string | number, // Either a number in milliseconds, or a Tone Time-string
+          globalClockScheduleTime: Tone.Unit.Seconds,
+        ) => void
+
+        if (typeof instrument.synth === 'string') {
+          const synth = instrument.synth === 'FMSynth' ? new Tone.FMSynth() : new Tone.AMSynth()
+          audioNodeStartOfChain = synth
+          schedulePlay = (note, durationMs, globalClockScheduleTime) => {
+            synth.triggerAttackRelease(note, durationMs, globalClockScheduleTime)
+          }
+        } else {
+          // This a MIDI external synth, not a WebAudio one
+          const synthConfig = instrument.synth
+          let midiOutputNumber: number
+          if (this.webMidi.outputs.length === 1) {
+            midiOutputNumber = 0
+          } else if ('output' in synthConfig) {
+            midiOutputNumber = synthConfig.output! // !!!
           } else {
-            if (playCue.mode === 'once') {
-              for (const [index, note] of playCue.notes.entries()) {
-                synth.triggerAttackRelease(
-                  note,
-                  playCue.duration,
-                  time +
-                    Tone.Time(playCue.beat).toSeconds() +
-                    index * Tone.Time(playCue.duration).toSeconds(),
-                )
+            throw new Error('from.input is required when more than 1 MIDI device is connected')
+          }
+
+          if (synthConfig.loopback) {
+            const { input, channel } = synthConfig.loopback
+            let inputStream: Tone.UserMedia
+            if (input) {
+              if (input in this.userMediaStreams) {
+                inputStream = this.userMediaStreams[input]! // !!!!
+                inputStream.disconnect()
+              } else {
+                inputStream = this.userMedia // TODO: this should be a future stream somehow, not the default input
+                this.userMedia
+                  .open(input)
+                  .then((stream) => {
+                    this.userMediaStreams[input] = stream
+                  })
+                  .catch(console.error)
               }
             } else {
-              let timePointer = time
-              let lastNote: string | null = null
+              inputStream = this.userMediaStreams.default
+              inputStream.disconnect()
+            }
+            if (channel) {
+              const split = new Tone.Split()
+              inputStream.connect(split)
+              const passthrough = new Tone.Gain()
+              split.connect(passthrough, channel === 'left' ? 0 : 1)
+              audioNodeStartOfChain = passthrough
+            } else {
+              audioNodeStartOfChain = inputStream
+            }
+          }
 
-              // This function takes a note-string like "C4" and alters the octave
-              // number postfix, so eg `incrementNoteString("C4", 1) returns "C5".
-              const incrementNoteString = (input: string, by: number) => {
-                return input.replace(/(\D+)(\d+)$/, (_, letters: string, number: string) => {
-                  const incrementedNumber = parseInt(number, 10) + by
-                  return letters + incrementedNumber.toString()
-                })
-              }
+          schedulePlay = (note, duration, globalClockScheduleTime) => {
+            Tone.getDraw().schedule(() => {
+              this.webMidi.outputs[midiOutputNumber]?.playNote(note, {
+                duration:
+                  typeof duration === 'string' ? Tone.Time(duration).toMilliseconds() : duration,
+              })
+            }, globalClockScheduleTime)
+          }
+        }
 
-              const notesWithOctaveVariance = playCue.notes
-                .map((note) => {
-                  const pitches = [note]
-                  for (let i = 1; i < (playCue.octaveVariance ?? 0) + 1; i++) {
-                    pitches.push(incrementNoteString(note, i))
-                    pitches.push(incrementNoteString(note, -i))
-                  }
-                  return pitches.filter((pitch) => Tone.isNote(pitch))
-                })
-                .flat()
+        for (const playCue of instrument.on.sort(timeOrderSort)) {
+          if (playCue.mode === 'once') {
+            for (const [index, note] of playCue.notes.entries()) {
+              schedulePlay(
+                note,
+                playCue.duration,
+                globalClockPhraseStartTime +
+                  Tone.Time(playCue.beat).toSeconds() +
+                  index * Tone.Time(playCue.duration).toSeconds(),
+              )
+            }
+          } else {
+            // This function takes a note-string like "C4" and alters the octave
+            // number postfix, so eg `incrementNoteString("C4", 1) returns "C5".
+            const incrementNoteString = (input: string, by: number) => {
+              return input.replace(/(\D+)(\d+)$/, (_, letters: string, number: string) => {
+                const incrementedNumber = parseInt(number, 10) + by
+                return letters + incrementedNumber.toString()
+              })
+            }
 
-              while (timePointer < time + Tone.Time('4m').toSeconds()) {
-                const availableNotes =
-                  lastNote !== null
-                    ? notesWithOctaveVariance.filter((note) => note !== lastNote)
-                    : notesWithOctaveVariance
+            const notesWithOctaveVariance = playCue.notes
+              .map((note) => {
+                const pitches = [note]
+                for (let i = 1; i < (playCue.octaveVariance ?? 0) + 1; i++) {
+                  pitches.push(incrementNoteString(note, i))
+                  pitches.push(incrementNoteString(note, -i))
+                }
+                return pitches.filter((pitch) => Tone.isNote(pitch))
+              })
+              .flat()
 
-                const randomIndex = Math.floor(Math.random() * availableNotes.length)
-                // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-                lastNote = availableNotes[randomIndex] as string
+            let timePointer = globalClockPhraseStartTime
+            let lastNote: string | null = null
 
-                synth.triggerAttackRelease(lastNote, playCue.duration, timePointer)
-                timePointer += Tone.Time(playCue.every).toSeconds()
-              }
+            while (timePointer < globalClockPhraseStartTime + Tone.Time('4m').toSeconds()) {
+              const availableNotes =
+                lastNote !== null
+                  ? // We don't want to repeat a note, so if the note was already played last,
+                    // remove it from the list of nodes under consideration for random choice.
+                    notesWithOctaveVariance.filter((note) => note !== lastNote)
+                  : notesWithOctaveVariance
+
+              const randomIndex = Math.floor(Math.random() * availableNotes.length)
+              // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+              lastNote = availableNotes[randomIndex] as string
+
+              schedulePlay(lastNote, playCue.duration, timePointer)
+              timePointer += Tone.Time(playCue.every).toSeconds()
             }
           }
         }
+      } else if ('external' in instrument) {
+        const { input } = instrument.external
+        if (input) {
+          if (input in this.userMediaStreams) {
+            audioNodeStartOfChain = this.userMediaStreams[input]! // !!!!
+            // TODO: Use Splitter to get an individual channel
+          } else {
+            audioNodeStartOfChain = this.userMedia // TODO: this should be a future stream somehow, not the default input
+            this.userMedia
+              .open(input)
+              .then((stream) => {
+                this.userMediaStreams[input] = stream
+              })
+              .catch(console.error)
+          }
+        } else {
+          audioNodeStartOfChain = this.userMediaStreams.default /// !!!
+        }
+        // TODO: Splitter for left or right
       } else {
         const sample = this.samples[instrument.sample.name]
         if (sample === undefined) {
@@ -127,24 +242,13 @@ export class Engine {
         }
         audioNodeStartOfChain = sample
 
-        /*
-        // HOW TO IMPLEMENT stretching sample to a whole bar
-        console.log(player.toSeconds('4n'), player.buffer.duration, player.sampleTime / player.toSeconds('1:0:0'))
-        player.playbackRate = player.buffer.duration / player.toSeconds('1:0:0')
-        */
         if (instrument.sample.stretchTo) {
           sample.playbackRate =
             sample.buffer.duration / sample.toSeconds(instrument.sample.stretchTo)
-          console.log(
-            `Set player playback rate to ${sample.playbackRate} (to fit buffer duration ${sample.buffer.duration} into time ${instrument.sample.stretchTo}, which is ${sample.toSeconds(instrument.sample.stretchTo)} seconds)`,
-          )
         }
-        audioNodeStartOfChain = sample
-        for (const note of instrument.on.sort()) {
-          console.log(
-            `scheduling ${instrument.sample.name} at beat ${note} which is ${Tone.Time(note).toSeconds()} from now (which is ${time}) for a result of time ${time + Tone.Time(note).toSeconds()}`,
-          )
-          sample.start(time + Tone.Time(note).toSeconds())
+
+        for (const note of instrument.on.sort(timeOrderSort)) {
+          sample.start(globalClockPhraseStartTime + Tone.Time(note).toSeconds())
         }
       }
 
@@ -232,17 +336,39 @@ export class Engine {
     this.tracks = []
     this.samples = samples
     this.loop = new Tone.Loop(this.callback, '4m')
+    Tone.getContext().lookAhead = 0.5 // Increase lookahead time (default is 0.1)
     this.transport = Tone.getTransport()
-    this.transport.bpm.value = 70
+    this.transport.bpm.value = 60
     this.webMidi = WM
     this.events = events
+    this.userMedia = new Tone.UserMedia()
+    this.userMediaStreams = {
+      // will be open()'d in `async start()` below,
+      // where it can be awaited
+      default: this.userMedia,
+    }
   }
 
   async start() {
     await Tone.start()
     this.webMidi = await this.webMidi.enable()
     // Tone.Transport.timeSignature = [22, 8]
+    await this.userMediaStreams.default.open()
     this.transport.start()
     this.loop.start(0)
   }
 }
+
+// TODO: Firefox switches output to the chosen device when calling
+// `new Tone.UserMedia()`, which is annoying if you don't want to use
+// the input device also as output.
+// This wasn't quite enough to make it work:
+//
+// if (
+//   'selectAudioOutput' in navigator.mediaDevices &&
+//   typeof navigator.mediaDevices.selectAudioOutput === 'function'
+// ) {
+//   await navigator.mediaDevices.selectAudioOutput()
+// } else {
+//   console.log('selectAudioOutput() not supported.')
+// }

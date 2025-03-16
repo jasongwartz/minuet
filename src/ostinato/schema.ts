@@ -63,22 +63,34 @@ const zInstrumentBase = z
   })
   .merge(zEffectable)
 
+const zExternalInput = z
+  .object({
+    external: z.object({
+      input: z.string().optional(),
+      channel: z.enum(['left', 'right']).optional(),
+    }),
+  })
+  .merge(zInstrumentBase)
+
 const zSynth = z
   .object({
-    synth: z.enum(['FMSynth', 'AMSynth']),
+    synth: z.enum(['FMSynth', 'AMSynth']).or(
+      z.object({
+        output: z.number().optional(),
+        loopback: zExternalInput.shape.external.optional(),
+      }),
+    ),
     on: z.array(
-      z.string().or(
-        z.object({
-          notes: z.array(z.string()),
-          beat: z.string(),
-          duration: z.string(),
-          every: z.string(),
-          mode: z.enum(['once', 'loop']),
-          // pattern: z.enum(['arpeggio', 'sequence']),
-          order: z.enum(['as-written', 'low-to-high', 'random']),
-          octaveVariance: z.number().optional(),
-        }),
-      ),
+      z.object({
+        notes: z.array(z.string()),
+        beat: z.string(),
+        duration: z.string(),
+        every: z.string(),
+        mode: z.enum(['once', 'loop']),
+        // pattern: z.enum(['arpeggio', 'sequence']),
+        order: z.enum(['as-written', 'low-to-high', 'random']),
+        octaveVariance: z.number().optional(),
+      }),
     ),
   })
   .merge(zInstrumentBase)
@@ -99,7 +111,7 @@ const zSample = z
   })
   .merge(zInstrumentBase)
 
-const zInstrument = z.union([zSample, zSynth])
+const zInstrument = z.union([zSample, zSynth, zExternalInput])
 
 export type Instrument = z.infer<typeof zInstrument>
 

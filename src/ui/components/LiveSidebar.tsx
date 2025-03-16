@@ -34,7 +34,15 @@ export function LiveSidebar({
             {tracks
               .filter((t): t is Track & { node: ToneAudioNode } => t.node !== undefined)
               .map(({ config, node }) => {
-                const name = config.id ?? ('synth' in config ? config.synth : config.sample.name)
+                const name =
+                  config.id ??
+                  ('synth' in config
+                    ? typeof config.synth === 'string'
+                      ? config.synth
+                      : `MIDI ${config.synth.output}`
+                    : 'external' in config
+                      ? 'external'
+                      : config.sample.name)
                 // Use the `phrase` value to force rerendering when config and name stays the same,
                 // but the Tone node changes.
                 // TODO: Remove this when Tone.Player instances are held across phrases as long
