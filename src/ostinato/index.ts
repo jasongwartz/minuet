@@ -12,7 +12,7 @@ export interface Track {
   node?: Tone.ToneAudioNode
 }
 
-interface Events {
+export interface Events {
   onEachBeat?: ((phrase: number, bar: number, beat: number) => void) | undefined
   onSchedulingStart?: () => void
   onSchedulingComplete?: (duration: number) => void
@@ -65,6 +65,8 @@ export class Engine {
     this.phrase += 1
     this.events?.onSchedulingStart?.()
 
+    console.log(`Scheduling phrase number: ${this.phrase}`)
+
     this.transport.scheduleRepeat(
       (repeatTime) => {
         // Calculate how many seconds, and therefore how many beats,
@@ -85,6 +87,7 @@ export class Engine {
       },
       '4n',
       transportClockPhraseStartTime,
+      '4:0:0',
     )
 
     if (this.config?.bpm) {
