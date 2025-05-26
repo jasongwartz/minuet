@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { ToneAudioNode } from 'tone'
 import * as Tone from 'tone'
 
 import { Card, CardContent, CardHeader, CardTitle } from './shadcn-ui/card'
 import { Progress } from './shadcn-ui/progress'
 
-export function SidebarCardVolumeMeter({ node, title }: { title: string; node: ToneAudioNode }) {
+export function SidebarVolumeCard({ node, title }: { title: string; node: ToneAudioNode }) {
+  return (
+    <Card className='m-4'>
+      <CardHeader className=''>
+        <CardTitle className='truncate'>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <SidebarCardVolumeMeter node={node} />
+      </CardContent>
+    </Card>
+  )
+}
+
+export const SidebarCardVolumeMeter = memo(({ node }: { node: ToneAudioNode }) => {
   // Implementation largely sourced from:
   // https://css-tricks.com/using-requestanimationframe-with-react-hooks/
   // and
@@ -35,14 +48,6 @@ export function SidebarCardVolumeMeter({ node, title }: { title: string; node: T
     }
   }, [node, animate])
 
-  return (
-    <Card className='m-4'>
-      <CardHeader className=''>
-        <CardTitle className='truncate'>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Progress value={volume < -100 ? 0 : 100 + volume} />
-      </CardContent>
-    </Card>
-  )
-}
+  // TODO: this seems to be what's causing an "Aw, snap" after about 20-25 phrases!
+  return <Progress value={volume < -100 ? 0 : 100 + volume} />
+})

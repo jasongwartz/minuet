@@ -1,9 +1,11 @@
+import { useAtom } from 'jotai'
 import type { ToneAudioNode } from 'tone'
 import { getDestination } from 'tone'
 import type { WebMidi } from 'webmidi'
 
 import type { Track } from '@/src/ostinato'
 
+import { currentPhraseAtom } from '../state'
 import { MidiDebugCard } from './MidiDebugCard'
 import {
   Sidebar,
@@ -13,24 +15,18 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from './shadcn-ui/sidebar'
-import { SidebarCardVolumeMeter } from './SidebarCardVolumeMeter'
+import { SidebarVolumeCard } from './SidebarCardVolumeMeter'
 
-export function LiveSidebar({
-  tracks,
-  phrase,
-  webmidi,
-}: {
-  tracks: Track[]
-  phrase: number
-  webmidi?: typeof WebMidi
-}) {
+export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: typeof WebMidi }) {
+  const [currentPhrase] = useAtom(currentPhraseAtom)
+
   return (
     <Sidebar variant='floating' side='right'>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Tracks ({tracks.length})</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarCardVolumeMeter title='Master' node={getDestination()} />
+            <SidebarVolumeCard title='Master' node={getDestination()} />
             {tracks
               .filter((t): t is Track & { node: ToneAudioNode } => t.node !== undefined)
               .map(({ config, node }) => {
@@ -47,7 +43,13 @@ export function LiveSidebar({
                 // but the Tone node changes.
                 // TODO: Remove this when Tone.Player instances are held across phrases as long
                 // as config doesn't change.
-                return <SidebarCardVolumeMeter key={name + `-${phrase}`} title={name} node={node} />
+                return (
+                  <SidebarVolumeCard
+                    key={name + `-${currentPhrase ?? 0}`}
+                    title={name}
+                    node={node}
+                  />
+                )
               })}
           </SidebarGroupContent>
         </SidebarGroup>
