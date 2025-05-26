@@ -57,6 +57,8 @@ module.exports = {
         allowNumber: true,
       },
     ],
+    '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+
     'import/no-cycle': 'error',
     'check-file/filename-naming-convention': [
       'error',
