@@ -224,8 +224,9 @@ export class Engine {
       } else if ('external' in instrument) {
         const { input } = instrument.external
         if (input) {
-          if (input in this.userMediaStreams) {
-            audioNodeStartOfChain = this.userMediaStreams[input]! // !!!!
+          const stream = this.userMediaStreams[input]
+          if (stream) {
+            audioNodeStartOfChain = stream
             // TODO: Use Splitter to get an individual channel
           } else {
             audioNodeStartOfChain = this.userMedia // TODO: this should be a future stream somehow, not the default input
