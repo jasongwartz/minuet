@@ -28,12 +28,13 @@ import {
 
 const App = () => {
   const [engineState, setEngine] = useState<Engine | null>(null)
-  const [samples, setSamples] = useState([] as (SampleDetails & { player?: Tone.Player })[])
+  const [samples, setSamples] = useState<(SampleDetails & { player?: Tone.Player })[]>([])
 
   const { toast } = useToast()
   const setCurrentBeat = useSetAtom(currentBeatAtom)
   const setEvaluatingStatusIndicator = useSetAtom(evaluatingStatusIndicatorAtom)
   const setSchedulingStatusIndicator = useSetAtom(schedulingStatusIndicatorAtom)
+  const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
 
   useEffect(() => {
     getSamples()
@@ -97,40 +98,44 @@ const App = () => {
     monaco.editor.setTheme('vs-light')
 
     const evaluateEditorCallback = () => {
-      if (engineRef.current) {
-        const start = Date.now()
-        setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
-        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-        execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
-          .then(async () => {
-            await editor.getAction('editor.action.formatDocument')?.run()
-            setTimeout(() => {
-              setEvaluatingStatusIndicator({
-                colour: 'bg-gray-200',
-                text: `${Date.now() - start}ms`,
-              })
-            }, 100)
-          })
-          .catch((err: unknown) => {
+      if (!engineRef.current) {
+        toast({
+          description: `Engine not yet started: loaded ${samplesRef.current.filter((s) => 'player' in s).length} out of ${samplesRef.current.length} samples`,
+          variant: 'destructive',
+        })
+        return
+      }
+      const start = Date.now()
+      setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
+      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
+      execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
+        .then(async () => {
+          await editor.getAction('editor.action.formatDocument')?.run()
+          setTimeout(() => {
             setEvaluatingStatusIndicator({
-              colour: 'bg-red-500',
+              colour: 'bg-gray-200',
               text: `${Date.now() - start}ms`,
             })
-            console.error(err)
-            toast({
-              title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
-              description: err instanceof Error ? err.message : 'Unknown error',
-              variant: 'destructive',
-            })
+          }, 100)
+        })
+        .catch((err: unknown) => {
+          setEvaluatingStatusIndicator({
+            colour: 'bg-red-500',
+            text: `${Date.now() - start}ms`,
           })
-      }
+          console.error(err)
+          toast({
+            title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
+            description: err instanceof Error ? err.message : 'Unknown error',
+            variant: 'destructive',
+          })
+        })
     }
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, evaluateEditorCallback)
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Backslash, evaluateEditorCallback)
   }
 
   const [trackNodes, setTrackNodes] = useState<Track[]>([])
-  const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
 
   return (
     <>

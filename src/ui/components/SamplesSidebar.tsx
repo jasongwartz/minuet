@@ -2,6 +2,7 @@ import { ChevronDown, Music } from 'lucide-react'
 import type * as Tone from 'tone'
 
 import type { SampleDetails } from '../load_samples'
+import type { EditorLanguage } from './Editor'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
 import { useToast } from './shadcn-ui/hooks/use-toast'
 import {
@@ -32,7 +33,7 @@ export function SamplesSidebar({
   onLanguageChange,
 }: {
   samples: (SampleDetails & { player?: Tone.Player })[]
-  onLanguageChange: (value: 'pkl' | 'typescript') => void
+  onLanguageChange: (value: EditorLanguage) => void
 }) {
   const { toast } = useToast()
   return (
@@ -78,6 +79,7 @@ export function SamplesSidebar({
                     <SelectLabel>Editor Language</SelectLabel>
                     <SelectItem value='typescript'>TypeScript</SelectItem>
                     <SelectItem value='pkl'>Pkl</SelectItem>
+                    <SelectItem value='python'>Python</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

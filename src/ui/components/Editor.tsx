@@ -3,7 +3,7 @@ import * as monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
-export type EditorLanguage = 'pkl' | 'typescript'
+export type EditorLanguage = 'pkl' | 'typescript' | 'python'
 
 interface EditorProps {
   onEditorMount: OnMount

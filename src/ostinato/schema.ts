@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod/v4'
 
 const zEffectValueFrom = z.object({
   from: z
@@ -11,8 +11,8 @@ const zEffectValueFrom = z.object({
     .or(
       z.object({
         oscillator: z.enum(['lfo']),
-        min: z.number(),
-        max: z.number(),
+        min: z.number().or(z.string()),
+        max: z.number().or(z.string()),
         period: z.string(),
       }),
     ),
@@ -83,12 +83,12 @@ const zSynth = z
     on: z.array(
       z.object({
         notes: z.array(z.string()),
-        beat: z.string(),
+        beat: z.string().or(z.number()),
         duration: z.string(),
-        every: z.string(),
+        every: z.string().optional(),
         mode: z.enum(['once', 'loop']),
         // pattern: z.enum(['arpeggio', 'sequence']),
-        order: z.enum(['as-written', 'low-to-high', 'random']),
+        order: z.enum(['as-written', 'low-to-high', 'random']).optional(),
         octaveVariance: z.number().optional(),
       }),
     ),
@@ -97,7 +97,7 @@ const zSynth = z
 
 const zSample = z
   .object({
-    on: z.array(z.string()),
+    on: z.array(z.string().or(z.number())),
     sample: z.object({
       name: z.string(),
       stretchTo: z.string().optional(),
@@ -116,7 +116,7 @@ const zInstrument = z.union([zSample, zSynth, zExternalInput])
 export type Instrument = z.infer<typeof zInstrument>
 
 export const ostinatoSchema = z.object({
-  master: zEffectable,
+  master: zEffectable.optional(),
   bpm: z.number().int().optional(),
   timeSignature: z
     .string()
