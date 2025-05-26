@@ -115,8 +115,8 @@ export class Engine {
           let midiOutputNumber: number
           if (this.webMidi.outputs.length === 1) {
             midiOutputNumber = 0
-          } else if ('output' in synthConfig) {
-            midiOutputNumber = synthConfig.output! // !!!
+          } else if (synthConfig.output) {
+            midiOutputNumber = synthConfig.output
           } else {
             throw new Error('from.input is required when more than 1 MIDI device is connected')
           }
@@ -125,8 +125,9 @@ export class Engine {
             const { input, channel } = synthConfig.loopback
             let inputStream: Tone.UserMedia
             if (input) {
-              if (input in this.userMediaStreams) {
-                inputStream = this.userMediaStreams[input]! // !!!!
+              const stream = this.userMediaStreams[input]
+              if (stream) {
+                inputStream = stream
                 inputStream.disconnect()
               } else {
                 inputStream = this.userMedia // TODO: this should be a future stream somehow, not the default input
@@ -150,6 +151,12 @@ export class Engine {
             } else {
               audioNodeStartOfChain = inputStream
             }
+          } else {
+            // In this case there is no audio node representing
+            // this playing synth, so we initialise an empty source.
+            // That way, all the effects code later doesn't need to
+            // account for audioNodeStartOfChain possibly being undefined.
+            audioNodeStartOfChain = new Tone.ToneBufferSource()
           }
 
           schedulePlay = (note, duration, globalClockScheduleTime) => {
