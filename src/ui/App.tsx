@@ -157,11 +157,13 @@ const App = () => {
           onLanguageChange={(lang) => {
             setEditorLanguage(lang)
             if (PLUGINS[lang].register) {
-              console.log(`Registering plugin "${PLUGINS[lang].name}"`)
+              toast({
+                description: `Loading plugin "${PLUGINS[lang].name}"`,
+              })
               PLUGINS[lang]
                 .register()
                 .then(() => {
-                  console.log(`Loaded and registered language plugin "${lang}"`)
+                  toast({ description: `Language plugin "${lang}" loaded successfully` })
                 })
                 .catch(console.error)
             }
