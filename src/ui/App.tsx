@@ -5,9 +5,10 @@ import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 
-import { execFromEditor } from '../lang/evaluate'
+import { execFromEditor, PLUGINS } from '../lang/evaluate'
 import type { Track } from '../ostinato'
 import { Engine } from '../ostinato'
+import type { EditorLanguage } from './components/Editor'
 import Editor from './components/Editor'
 import Header from './components/Header'
 import { LiveSidebar } from './components/LiveSidebar'
@@ -16,6 +17,7 @@ import { useToast } from './components/shadcn-ui/hooks/use-toast'
 import { SidebarProvider } from './components/shadcn-ui/sidebar'
 import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
+import defaultPython from './default_python.txt?raw'
 import defaultTs from './default_ts.txt?raw'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -35,6 +37,7 @@ const App = () => {
   const setEvaluatingStatusIndicator = useSetAtom(evaluatingStatusIndicatorAtom)
   const setSchedulingStatusIndicator = useSetAtom(schedulingStatusIndicatorAtom)
   const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
+  const editorLanguageRef = useRef(editorLanguage)
 
   useEffect(() => {
     getSamples()
@@ -93,6 +96,9 @@ const App = () => {
   useEffect(() => {
     engineRef.current = engineState
   })
+  useEffect(() => {
+    editorLanguageRef.current = editorLanguage
+  })
 
   const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.setTheme('vs-light')
@@ -108,7 +114,7 @@ const App = () => {
       const start = Date.now()
       setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
       // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-      execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
+      execFromEditor(engineRef.current, editor.getValue(), editorLanguageRef.current)
         .then(async () => {
           await editor.getAction('editor.action.formatDocument')?.run()
           setTimeout(() => {
@@ -137,6 +143,12 @@ const App = () => {
 
   const [trackNodes, setTrackNodes] = useState<Track[]>([])
 
+  const defaultContentsByLanguage: Partial<Record<EditorLanguage, string>> = {
+    typescript: defaultTs,
+    python: defaultPython,
+    pkl: defaultPkl,
+  }
+
   return (
     <>
       <SidebarProvider>
@@ -144,13 +156,22 @@ const App = () => {
           samples={samples}
           onLanguageChange={(lang) => {
             setEditorLanguage(lang)
+            if (PLUGINS[lang].register) {
+              console.log(`Registering plugin "${PLUGINS[lang].name}"`)
+              PLUGINS[lang]
+                .register()
+                .then(() => {
+                  console.log(`Loaded and registered language plugin "${lang}"`)
+                })
+                .catch(console.error)
+            }
           }}
         />
         <div className='w-full min-w-0'>
           <Header />
 
           <Editor
-            defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
+            defaultValue={defaultContentsByLanguage[editorLanguage] ?? ''}
             editorLanguage={editorLanguage}
             onEditorMount={onEditorMount}
           />

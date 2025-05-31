@@ -1,6 +1,8 @@
 import { ChevronDown, Music } from 'lucide-react'
 import type * as Tone from 'tone'
 
+import { PLUGINS } from '@/src/lang/evaluate'
+
 import type { SampleDetails } from '../load_samples'
 import type { EditorLanguage } from './Editor'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
@@ -66,8 +68,8 @@ export function SamplesSidebar({
           <SidebarGroupContent>
             <SidebarMenuItem>
               <Select
-                defaultValue='typescript'
-                onValueChange={(value: 'pkl' | 'typescript') => {
+                defaultValue='typescript' // TODO: use the default from the atom instead
+                onValueChange={(value: EditorLanguage) => {
                   onLanguageChange(value)
                 }}
               >
@@ -77,9 +79,9 @@ export function SamplesSidebar({
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Editor Language</SelectLabel>
-                    <SelectItem value='typescript'>TypeScript</SelectItem>
-                    <SelectItem value='pkl'>Pkl</SelectItem>
-                    <SelectItem value='python'>Python</SelectItem>
+                    {Object.entries(PLUGINS).map((plugin) => (
+                      <SelectItem value={plugin[0]}>{plugin[1].name}</SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>

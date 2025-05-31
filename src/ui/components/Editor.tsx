@@ -3,7 +3,9 @@ import * as monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
-export type EditorLanguage = 'pkl' | 'typescript' | 'python'
+import type { PLUGINS } from '@/src/lang/evaluate'
+
+export type EditorLanguage = keyof typeof PLUGINS
 
 interface EditorProps {
   onEditorMount: OnMount
@@ -22,12 +24,18 @@ export default function Editor(props: EditorProps) {
     },
   }
 
+  const syntaxHighlighterOverrides: Record<string, string> = {
+    // Override editor syntax highlighter if necessary
+    pkl: 'python',
+  }
+
+  const syntaxHighlightLanguage =
+    syntaxHighlighterOverrides[props.editorLanguage] ?? props.editorLanguage
+
   return (
     <MonacoEditor
       height='100vh'
-      language={
-        props.editorLanguage === 'typescript' ? 'typescript' : 'python' /* TODO: pkl? groovy? */
-      }
+      language={syntaxHighlightLanguage}
       defaultValue={props.defaultValue}
       onMount={props.onEditorMount}
       options={{ minimap: { enabled: false }, scrollBeyondLastLine: false, contextmenu: false }}

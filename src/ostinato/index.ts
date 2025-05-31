@@ -65,7 +65,9 @@ export class Engine {
     this.phrase += 1
     this.events?.onSchedulingStart?.()
 
-    console.log(`Scheduling phrase number: ${this.phrase}`)
+    // Calculate human-readable time since Transport started
+    const elapsedTime = `${Math.floor(transportClockPhraseStartTime / 60)}m${Math.floor(transportClockPhraseStartTime % 60)}s`
+    console.log(`Scheduling phrase number: ${this.phrase}, elapsed time: ${elapsedTime}`)
 
     this.transport.scheduleRepeat(
       (repeatTime) => {

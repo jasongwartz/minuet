@@ -1,17 +1,19 @@
 import { loadPyodide, version as pyodideVersion } from 'pyodide'
 import { transpile } from 'typescript'
+import { parse as yamlParse } from 'yaml'
 import { z } from 'zod/v4'
 
-import type { Engine, OstinatoSchema } from '../ostinato'
+import type { Engine } from '../ostinato'
 import { ostinatoSchema } from '../ostinato/schema'
 import type { EditorLanguage } from '../ui/components/Editor'
-
 interface LanguagePlugin {
+  name: string
   register?: () => Promise<void>
   render: (contents: string) => Promise<unknown>
 }
 
 const typescriptPlugin: LanguagePlugin = {
+  name: 'TypeScript',
   render: (contents) => {
     const transpiled = transpile(contents)
     // TODO: Validate parsed instead of assertion
@@ -24,6 +26,7 @@ const typescriptPlugin: LanguagePlugin = {
 }
 
 const pklPlugin: LanguagePlugin = {
+  name: 'Pkl',
   render: async (contents) => {
     const start = Date.now()
     const response = await // fetch('https://pkl-playground.vercel.app/api/pkl/evaluate', {
@@ -49,9 +52,12 @@ const pklPlugin: LanguagePlugin = {
   },
 }
 
+// TODO: Put this in a "plugin context" or similar, to share objects
+// from "register" step to "render"
 let pyodide: Awaited<ReturnType<typeof loadPyodide>> | null = null
 
 const pythonPlugin: LanguagePlugin = {
+  name: 'Python',
   register: async () => {
     pyodide = await loadPyodide({
       // TODO: Load Pyodide from Vite bundle, so that it can work offline:
@@ -62,7 +68,12 @@ const pythonPlugin: LanguagePlugin = {
   render: async (contents) => {
     // TODO: Run Pyodide in a web worker background thread:
     // https://pyodide.org/en/stable/usage/webworker.html
-    const output: unknown = await pyodide?.runPythonAsync(contents)
+    if (!pyodide) {
+      throw new Error('Python plugin not loaded!')
+    }
+    await pyodide.loadPackagesFromImports(contents)
+    const output: unknown = await pyodide.runPythonAsync(contents)
+    console.log(typeof output)
     if (typeof output !== 'string') {
       throw new Error('Python output must be a string! (eg. using `json.dumps()`)')
     }
@@ -71,14 +82,17 @@ const pythonPlugin: LanguagePlugin = {
   },
 }
 
-// TODO: proper on-startup loading of modules!
-void pythonPlugin.register?.()
+const yamlPlugin: LanguagePlugin = {
+  name: 'YAML',
+  render: (contents) => Promise.resolve(yamlParse(contents)),
+}
 
-const PLUGINS: Record<EditorLanguage, LanguagePlugin> = {
+export const PLUGINS = {
   pkl: pklPlugin,
   typescript: typescriptPlugin,
   python: pythonPlugin,
-}
+  yaml: yamlPlugin,
+} as const
 
 export const execFromEditor = async (
   engine: Engine,
@@ -86,8 +100,7 @@ export const execFromEditor = async (
   editorLanguage: EditorLanguage,
 ) => {
   const plugin = PLUGINS[editorLanguage]
-  // await plugin.register?.()
-  console.log('rendering', editorLanguage)
+  console.log(`Rendering input using "${plugin.name}" plugin`)
   const evalutedOutput = await plugin.render(contents)
 
   const validation = ostinatoSchema.safeParse(evalutedOutput)
