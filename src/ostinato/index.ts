@@ -19,8 +19,8 @@ export interface Events {
 }
 
 const timeOrderSort = (
-  a: string | number | { beat: string },
-  b: string | number | { beat: string },
+  a: string | number | { beat: string | number },
+  b: string | number | { beat: string | number },
 ) => {
   // Sort beats into order:
   // Tone cannot schedule an event in advance of an already-scheduled event for the same track.
@@ -210,7 +210,7 @@ export class Engine {
             let lastNote: string | null = null
 
             while (timePointer < globalClockPhraseStartTime + Tone.Time('4m').toSeconds()) {
-              const availableNotes =
+              const availableNotes: typeof notesWithOctaveVariance =
                 lastNote !== null
                   ? // We don't want to repeat a note, so if the note was already played last,
                     // remove it from the list of nodes under consideration for random choice.
@@ -218,8 +218,11 @@ export class Engine {
                   : notesWithOctaveVariance
 
               const randomIndex = Math.floor(Math.random() * availableNotes.length)
-              // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-              lastNote = availableNotes[randomIndex] as string
+              const selectedNote = availableNotes[randomIndex]
+              if (typeof selectedNote !== 'string') {
+                throw new Error('Failed to choose from available notes')
+              }
+              lastNote = selectedNote
 
               schedulePlay(lastNote, playCue.duration, timePointer)
               timePointer += Tone.Time(playCue.every).toSeconds()
