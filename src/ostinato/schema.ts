@@ -34,18 +34,12 @@ const zEffectNameBase = z.object({
 })
 
 const zEffect = z.union([
-  zEffectNameBase.merge(
-    z.object({
-      value: zEffectValueParam,
-    }),
-  ),
-  zEffectNameBase.merge(
-    z.object({
-      params: zEffectValueParam.or(
-        z.array(z.object({ name: z.string(), value: zEffectValueParam })),
-      ),
-    }),
-  ),
+  zEffectNameBase.extend({
+    value: zEffectValueParam,
+  }),
+  zEffectNameBase.extend({
+    params: zEffectValueParam.or(z.array(z.object({ name: z.string(), value: zEffectValueParam }))),
+  }),
 ])
 
 export type EffectName = z.infer<typeof zEffect>['name']
@@ -57,59 +51,51 @@ const zEffectable = z.object({
   // https://stackoverflow.com/questions/64679423/tone-js-follower-to-create-side-chain-volume-control
 })
 
-const zInstrumentBase = z
-  .object({
-    id: z.string().optional(),
-  })
-  .merge(zEffectable)
+const zInstrumentBase = zEffectable.extend({
+  id: z.string().optional(),
+})
 
-const zExternalInput = z
-  .object({
-    external: z.object({
-      input: z.string().optional(),
-      channel: z.enum(['left', 'right']).optional(),
+const zExternalInput = zInstrumentBase.extend({
+  external: z.object({
+    input: z.string().optional(),
+    channel: z.enum(['left', 'right']).optional(),
+  }),
+})
+
+const zSynth = zInstrumentBase.extend({
+  synth: z.enum(['FMSynth', 'AMSynth']).or(
+    z.object({
+      output: z.number().optional(),
+      loopback: zExternalInput.shape.external.optional(),
     }),
-  })
-  .merge(zInstrumentBase)
-
-const zSynth = z
-  .object({
-    synth: z.enum(['FMSynth', 'AMSynth']).or(
-      z.object({
-        output: z.number().optional(),
-        loopback: zExternalInput.shape.external.optional(),
-      }),
-    ),
-    on: z.array(
-      z.object({
-        notes: z.array(z.string()),
-        beat: z.string().or(z.number()),
-        duration: z.string(),
-        every: z.string().optional(),
-        mode: z.enum(['once', 'loop']),
-        // pattern: z.enum(['arpeggio', 'sequence']),
-        order: z.enum(['as-written', 'low-to-high', 'random']).optional(),
-        octaveVariance: z.number().optional(),
-      }),
-    ),
-  })
-  .merge(zInstrumentBase)
-
-const zSample = z
-  .object({
-    on: z.array(z.string().or(z.number())),
-    sample: z.object({
-      name: z.string(),
-      stretchTo: z.string().optional(),
-      pitchShift: z
-        .object({
-          from: z.string(),
-          to: z.string(),
-        })
-        .optional(),
+  ),
+  on: z.array(
+    z.object({
+      notes: z.array(z.string()),
+      beat: z.string().or(z.number()),
+      duration: z.string(),
+      every: z.string().optional(),
+      mode: z.enum(['once', 'loop']),
+      // pattern: z.enum(['arpeggio', 'sequence']),
+      order: z.enum(['as-written', 'low-to-high', 'random']).optional(),
+      octaveVariance: z.number().optional(),
     }),
-  })
-  .merge(zInstrumentBase)
+  ),
+})
+
+const zSample = zInstrumentBase.extend({
+  on: z.array(z.string().or(z.number())),
+  sample: z.object({
+    name: z.string(),
+    stretchTo: z.string().optional(),
+    pitchShift: z
+      .object({
+        from: z.string(),
+        to: z.string(),
+      })
+      .optional(),
+  }),
+})
 
 const zInstrument = z.union([zSample, zSynth, zExternalInput])
 

@@ -83,7 +83,6 @@ const App = () => {
           ),
         )
       })
-      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
       .catch(console.error)
   }, [])
 
@@ -113,7 +112,6 @@ const App = () => {
       }
       const start = Date.now()
       setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
-      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
       execFromEditor(engineRef.current, editor.getValue(), editorLanguageRef.current)
         .then(async () => {
           await editor.getAction('editor.action.formatDocument')?.run()
