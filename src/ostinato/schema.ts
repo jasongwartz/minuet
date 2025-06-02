@@ -46,7 +46,7 @@ export type EffectName = z.infer<typeof zEffect>['name']
 export type Effect = z.infer<typeof zEffect>
 
 const zEffectable = z.object({
-  with: z.array(zEffect),
+  with: z.array(zEffect).default([]),
   // TODO: Support side-chain:
   // https://stackoverflow.com/questions/64679423/tone-js-follower-to-create-side-chain-volume-control
 })
