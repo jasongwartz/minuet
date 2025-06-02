@@ -33,9 +33,15 @@ import {
 export function SamplesSidebar({
   samples,
   onLanguageChange,
+  projects,
+  selectedProjectId,
+  onProjectChange,
 }: {
   samples: (SampleDetails & { player?: Tone.Player })[]
   onLanguageChange: (value: EditorLanguage) => void
+  projects: string[]
+  selectedProjectId?: string
+  onProjectChange: (projectId: string) => void
 }) {
   const { toast } = useToast()
   return (
@@ -63,6 +69,30 @@ export function SamplesSidebar({
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Project</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenuItem>
+              <Select
+                value={selectedProjectId}
+                onValueChange={(value) => {
+                  onProjectChange(value)
+                }}
+              >
+                <SelectTrigger className='w-[180px]'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {projects.map((p) => (
+                      <SelectItem value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </SidebarMenuItem>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Editor Language</SidebarGroupLabel>
           <SidebarGroupContent>
