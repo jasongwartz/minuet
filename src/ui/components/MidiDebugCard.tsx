@@ -14,6 +14,7 @@ export function MidiDebugCard({ webmidi }: { webmidi: typeof WebMidi }) {
       number: number
     }
     value?: number
+    type?: string
   } | null>(null)
 
   const clearValueMessageTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -30,6 +31,7 @@ export function MidiDebugCard({ webmidi }: { webmidi: typeof WebMidi }) {
         },
         controller: { name: event.controller.name, number: event.controller.number },
         value: event.rawValue,
+        type: event.type,
       })
       clearValueMessageTimeout.current = setTimeout(() => {
         setMostRecentChange(null)
@@ -48,6 +50,9 @@ export function MidiDebugCard({ webmidi }: { webmidi: typeof WebMidi }) {
           <p className='text-xs font-thin'>{mostRecentChange?.input.name}</p>
           <p>
             Controller <span className='font-bold'>{mostRecentChange?.controller.number}</span>
+          </p>
+          <p>
+            Type: <span className='font-extrabold'>{mostRecentChange?.type}</span>
           </p>
           <p>
             Value: <span className='font-extrabold'>{mostRecentChange?.value}</span>

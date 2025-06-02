@@ -7,6 +7,7 @@ interface SampleData {
   blob: Blob
 }
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 const db = new Dexie('SamplesDataDb') as Dexie & {
   samples: EntityTable<
     SampleData,
