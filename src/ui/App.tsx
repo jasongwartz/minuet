@@ -5,9 +5,10 @@ import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 
-import { execFromEditor } from '../lang/evaluate'
+import { execFromEditor, PLUGINS } from '../lang/evaluate'
 import type { Track } from '../ostinato'
 import { Engine } from '../ostinato'
+import type { EditorLanguage } from './components/Editor'
 import Editor from './components/Editor'
 import Header from './components/Header'
 import { LiveSidebar } from './components/LiveSidebar'
@@ -16,6 +17,7 @@ import { useToast } from './components/shadcn-ui/hooks/use-toast'
 import { SidebarProvider } from './components/shadcn-ui/sidebar'
 import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
+import defaultPython from './default_python.txt?raw'
 import defaultTs from './default_ts.txt?raw'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
@@ -28,12 +30,14 @@ import {
 
 const App = () => {
   const [engineState, setEngine] = useState<Engine | null>(null)
-  const [samples, setSamples] = useState([] as (SampleDetails & { player?: Tone.Player })[])
+  const [samples, setSamples] = useState<(SampleDetails & { player?: Tone.Player })[]>([])
 
   const { toast } = useToast()
   const setCurrentBeat = useSetAtom(currentBeatAtom)
   const setEvaluatingStatusIndicator = useSetAtom(evaluatingStatusIndicatorAtom)
   const setSchedulingStatusIndicator = useSetAtom(schedulingStatusIndicatorAtom)
+  const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
+  const editorLanguageRef = useRef(editorLanguage)
 
   useEffect(() => {
     getSamples()
@@ -79,7 +83,6 @@ const App = () => {
           ),
         )
       })
-      // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
       .catch(console.error)
   }, [])
 
@@ -92,45 +95,57 @@ const App = () => {
   useEffect(() => {
     engineRef.current = engineState
   })
+  useEffect(() => {
+    editorLanguageRef.current = editorLanguage
+  })
 
   const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.setTheme('vs-light')
 
     const evaluateEditorCallback = () => {
-      if (engineRef.current) {
-        const start = Date.now()
-        setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
-        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-        execFromEditor(engineRef.current, editor.getValue(), editorLanguage)
-          .then(async () => {
-            await editor.getAction('editor.action.formatDocument')?.run()
-            setTimeout(() => {
-              setEvaluatingStatusIndicator({
-                colour: 'bg-gray-200',
-                text: `${Date.now() - start}ms`,
-              })
-            }, 100)
-          })
-          .catch((err: unknown) => {
+      if (!engineRef.current) {
+        toast({
+          description: `Engine not yet started: loaded ${samplesRef.current.filter((s) => 'player' in s).length} out of ${samplesRef.current.length} samples`,
+          variant: 'destructive',
+        })
+        return
+      }
+      const start = Date.now()
+      setEvaluatingStatusIndicator({ colour: 'bg-green-500', text: '...' })
+      execFromEditor(engineRef.current, editor.getValue(), editorLanguageRef.current)
+        .then(async () => {
+          await editor.getAction('editor.action.formatDocument')?.run()
+          setTimeout(() => {
             setEvaluatingStatusIndicator({
-              colour: 'bg-red-500',
+              colour: 'bg-gray-200',
               text: `${Date.now() - start}ms`,
             })
-            console.error(err)
-            toast({
-              title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
-              description: err instanceof Error ? err.message : 'Unknown error',
-              variant: 'destructive',
-            })
+          }, 100)
+        })
+        .catch((err: unknown) => {
+          setEvaluatingStatusIndicator({
+            colour: 'bg-red-500',
+            text: `${Date.now() - start}ms`,
           })
-      }
+          console.error(err)
+          toast({
+            title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
+            description: err instanceof Error ? err.message : 'Unknown error',
+            variant: 'destructive',
+          })
+        })
     }
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, evaluateEditorCallback)
     editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Backslash, evaluateEditorCallback)
   }
 
   const [trackNodes, setTrackNodes] = useState<Track[]>([])
-  const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
+
+  const defaultContentsByLanguage: Partial<Record<EditorLanguage, string>> = {
+    typescript: defaultTs,
+    python: defaultPython,
+    pkl: defaultPkl,
+  }
 
   return (
     <>
@@ -139,13 +154,24 @@ const App = () => {
           samples={samples}
           onLanguageChange={(lang) => {
             setEditorLanguage(lang)
+            if (PLUGINS[lang].register) {
+              toast({
+                description: `Loading plugin "${PLUGINS[lang].name}"`,
+              })
+              PLUGINS[lang]
+                .register()
+                .then(() => {
+                  toast({ description: `Language plugin "${lang}" loaded successfully` })
+                })
+                .catch(console.error)
+            }
           }}
         />
         <div className='w-full min-w-0'>
           <Header />
 
           <Editor
-            defaultValue={editorLanguage === 'typescript' ? defaultTs : defaultPkl}
+            defaultValue={defaultContentsByLanguage[editorLanguage] ?? ''}
             editorLanguage={editorLanguage}
             onEditorMount={onEditorMount}
           />
