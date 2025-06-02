@@ -104,9 +104,9 @@ const App = () => {
   const projects = useLiveQuery(() => db.projects.toArray())
   // const selectedProjectIdRef = useRef<string>()
   const [selectedProjectId, setSelectedProjectId] = useState<string>()
-  const project = useLiveQuery(() =>
-    selectedProjectId ? db.projects.where('id').equals(selectedProjectId) : undefined,
-  )
+  // const project = useLiveQuery(() =>
+  //   selectedProjectId ? db.projects.where('id').equals(selectedProjectId) : undefined,
+  // )
 
   const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.setTheme('vs-light')
