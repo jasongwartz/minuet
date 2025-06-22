@@ -28,6 +28,7 @@ import {
   editorLanguageAtom,
   evaluatingStatusIndicatorAtom,
   schedulingStatusIndicatorAtom,
+  selectedProjectAtom,
 } from './state'
 
 const App = () => {
@@ -103,7 +104,7 @@ const App = () => {
 
   const projects = useLiveQuery(() => db.projects.toArray())
   // const selectedProjectIdRef = useRef<string>()
-  const [selectedProjectId, setSelectedProjectId] = useState<string>()
+  const [selectedProjectId, setSelectedProjectId] = useAtom(selectedProjectAtom)
   // const project = useLiveQuery(() =>
   //   selectedProjectId ? db.projects.where('id').equals(selectedProjectId) : undefined,
   // )

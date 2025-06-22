@@ -1,4 +1,5 @@
 import { atom } from 'jotai'
+import { atomWithStorage } from 'jotai/utils'
 
 import type { EditorLanguage } from './components/Editor'
 
@@ -29,3 +30,5 @@ export const schedulingStatusIndicatorAtom = atom<{
 })
 
 export const editorLanguageAtom = atom<EditorLanguage>('typescript')
+
+export const selectedProjectAtom = atomWithStorage<string | null>('selectedProject', null)
