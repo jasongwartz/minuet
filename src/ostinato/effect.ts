@@ -8,6 +8,10 @@ interface EffectNameToNodeType {
   lpf: Tone.Filter
   gain: Tone.Gain
   volume: Tone.Volume
+  reverb: Tone.Reverb
+  chorus: Tone.Chorus
+  autowah: Tone.AutoWah
+  delay: Tone.Delay
 }
 
 interface NodeWithProperties<T> {
@@ -62,6 +66,36 @@ const nodeCreators: NodeCreator = {
     create: () => new Tone.Volume(),
     update: (node, value) => (node.volume.value = value),
     connect: (source, node) => source.connect(node.volume),
+  },
+  reverb: {
+    default: 1.5, // Tone.js reverb default value
+    min: 0,
+    max: 10,
+    create: () => new Tone.Reverb(),
+    update: (node, value) => (node.decay = value),
+  },
+  chorus: {
+    default: 1.5, // Tone.js default value
+    min: 0,
+    max: 10,
+    create: () => new Tone.Chorus(),
+    update: (node, value) => (node.frequency.value = value),
+    connect: (source, node) => source.connect(node.frequency),
+  },
+  autowah: {
+    default: 100, // Tone.js default value
+    min: 0,
+    max: 1000,
+    create: () => new Tone.AutoWah(),
+    update: (node, value) => (node.baseFrequency = value),
+  },
+  delay: {
+    default: 1,
+    min: 0,
+    max: 20,
+    create: () => new Tone.Delay(),
+    update: (node, value) => (node.delayTime.value = value),
+    connect: (source, node) => source.connect(node.delayTime),
   },
 } as const
 

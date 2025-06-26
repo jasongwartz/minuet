@@ -30,6 +30,10 @@ const zEffectNameBase = z.object({
     'gain',
     'distortion',
     'volume',
+    'reverb',
+    'chorus',
+    'autowah',
+    'delay',
   ]),
 })
 
