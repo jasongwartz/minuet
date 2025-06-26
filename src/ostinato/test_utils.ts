@@ -17,24 +17,48 @@ export function clearScheduledEvents(): void {
 }
 
 export function getEventsByType(type: ScheduledEvent['type']): ScheduledEvent[] {
-  return scheduledEvents.filter(event => event.type === type)
+  return scheduledEvents.filter((event) => event.type === type)
 }
 
-export function expectEventAtBeat(beat: string, type: ScheduledEvent['type']): ScheduledEvent | undefined {
+export function expectEventAtBeat(
+  beat: string,
+  type: ScheduledEvent['type'],
+  bpm = 120,
+): ScheduledEvent | undefined {
   const expectedTime = (() => {
-    // Simple time conversion for testing
-    if (beat === '1n') return 0
-    if (beat === '2n') return 2
-    if (beat === '3n') return 4
-    if (beat === '4n') return 6
-    if (beat === '4m') return 16 // 4 measures
+    const secondsPerBeat = 60 / bpm
+
+    // Handle note durations (e.g., "1n", "2n", "4n")
+    const noteRegex = /^(\d+)n$/i
+    const noteMatch = noteRegex.exec(beat)
+    if (noteMatch?.[1]) {
+      const noteValue = parseInt(noteMatch[1], 10)
+      if (noteValue === 1) {
+        // Whole note = 4 beats in 4/4 time
+        return secondsPerBeat * 4
+      } else {
+        // Other notes: 4/noteValue beats
+        return secondsPerBeat * (4 / noteValue)
+      }
+    }
+
+    // Handle measures (e.g., "4m")
+    const measureRegex = /^(\d+)m$/i
+    const measureMatch = measureRegex.exec(beat)
+    if (measureMatch?.[1]) {
+      const measures = parseInt(measureMatch[1], 10)
+      // 4 beats per measure in 4/4 time
+      return secondsPerBeat * 4 * measures
+    }
+
+    // Fallback to parsing as seconds
     return parseFloat(beat) || 0
   })()
-  
+
   // Find event by both time and type
-  const event = scheduledEvents.find(event => 
-    Math.abs(event.time - expectedTime) <= 0.001 && event.type === type
+  const event = scheduledEvents.find(
+    (event) => Math.abs(event.time - expectedTime) <= 0.001 && event.type === type,
   )
-  
+
   return event
 }

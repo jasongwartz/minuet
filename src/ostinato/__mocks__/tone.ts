@@ -4,31 +4,77 @@ import { scheduledEvents } from '../test_utils'
 
 const mockTime = (timeString: string) => ({
   toSeconds: (): number => {
-    if (timeString === '1n') return 0
-    if (timeString === '2n') return 2
-    if (timeString === '3n') return 4
-    if (timeString === '4n') return 6
-    if (timeString === '4m') return 16
+    const currentBPM = mockTransport.bpm.value
+    const secondsPerBeat = 60 / currentBPM
+
+    // Handle note durations (e.g., "1n", "2n", "4n")
+    const noteRegex = /^(\d+)n$/i
+    const noteMatch = noteRegex.exec(timeString)
+    if (noteMatch?.[1]) {
+      const noteValue = parseInt(noteMatch[1], 10)
+      if (noteValue === 1) {
+        // Whole note = 4 beats in 4/4 time
+        return secondsPerBeat * 4
+      } else {
+        // Other notes: 4/noteValue beats
+        return secondsPerBeat * (4 / noteValue)
+      }
+    }
+
+    // Handle measures (e.g., "4m")
+    const measureRegex = /^(\d+)m$/i
+    const measureMatch = measureRegex.exec(timeString)
+    if (measureMatch?.[1]) {
+      const measures = parseInt(measureMatch[1], 10)
+      // 4 beats per measure in 4/4 time
+      return secondsPerBeat * 4 * measures
+    }
+
+    // Fallback to parsing as seconds
     return parseFloat(timeString) || 0
   },
-  toBarsBeatsSixteenths: (): string => '0:0:0'
+  toBarsBeatsSixteenths: (): string => {
+    // Convert the time to seconds first, then to bars:beats:sixteenths
+    const timeInSeconds = mockTime(timeString).toSeconds()
+    const currentBPM = mockTransport.bpm.value
+    const secondsPerBeat = 60 / currentBPM
+
+    // Convert seconds to bars:beats:sixteenths (assuming 4/4 time)
+    const beatsPerBar = 4
+    const sixteenthsPerBeat = 4
+
+    const totalBeats = timeInSeconds / secondsPerBeat
+    const bars = Math.floor(totalBeats / beatsPerBar)
+    const beats = Math.floor(totalBeats % beatsPerBar)
+    const remainingBeats = totalBeats - (bars * beatsPerBar + beats)
+    const sixteenths = Math.floor(remainingBeats * sixteenthsPerBeat)
+
+    return `${bars}:${beats}:${sixteenths}`
+  },
 })
 
 const mockTransport = {
-  scheduleRepeat: vi.fn((callback: (time: number) => void, interval: string, startTime: number, duration: string): void => {
-    scheduledEvents.push({
-      type: 'beat',
-      time: startTime,
-      method: 'scheduleRepeat',
-      instrument: `interval:${interval}`,
-      duration
-    })
-    callback(startTime)
-  }),
+  scheduleRepeat: vi.fn(
+    (
+      callback: (time: number) => void,
+      interval: string,
+      startTime: number,
+      duration: string,
+    ): void => {
+      scheduledEvents.push({
+        type: 'beat',
+        time: startTime,
+        method: 'scheduleRepeat',
+        instrument: `interval:${interval}`,
+        duration,
+      })
+      callback(startTime)
+    },
+  ),
   getSecondsAtTime: vi.fn((time: number): number => time),
   bpm: { value: 120 },
   state: 'stopped',
-  start: vi.fn()
+  start: vi.fn(),
 }
 
 const mockGetDraw = {
@@ -41,7 +87,7 @@ const mockGetDraw = {
         lastEvent.time = time
       }
     }
-  })
+  }),
 }
 
 const mockSample = {
@@ -50,13 +96,13 @@ const mockSample = {
       type: 'sample',
       time,
       method: 'start',
-      instrument: 'test.wav'
+      instrument: 'test.wav',
     })
   }),
   buffer: { duration: 2.0 },
   toSeconds: vi.fn().mockReturnValue(1.0),
   disconnect: vi.fn(),
-  chain: vi.fn()
+  chain: vi.fn(),
 }
 
 const mockSynth = {
@@ -67,16 +113,16 @@ const mockSynth = {
       note,
       duration,
       method: 'triggerAttackRelease',
-      instrument: 'FMSynth'
+      instrument: 'FMSynth',
     })
   }),
   disconnect: vi.fn(),
-  chain: vi.fn()
+  chain: vi.fn(),
 }
 
 export const start = vi.fn()
 const mockContext = {
-  lookAhead: 0.5
+  lookAhead: 0.5,
 }
 
 export const getContext = () => mockContext
@@ -87,15 +133,15 @@ export const Time = mockTime
 
 export class Loop {
   private callback: (time: number) => void
-  
+
   constructor(callback: (time: number) => void, _interval: string) {
     this.callback = callback
   }
-  
+
   start(): void {
     this.callback(0)
   }
-  
+
   stop(): void {
     return undefined
   }
@@ -121,11 +167,11 @@ export class UserMedia {
   open(): Promise<this> {
     return Promise.resolve(this)
   }
-  
+
   disconnect(): void {
     return undefined
   }
-  
+
   close(): void {
     return undefined
   }

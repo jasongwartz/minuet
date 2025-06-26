@@ -37,6 +37,33 @@ describe('Engine Scheduling', () => {
     expect(engine.config.bpm).toEqual(bpm)
   })
 
+  it('BPM changes affect timing calculations', async () => {
+    // Test at 60 BPM (slower tempo)
+    engine.config = {
+      bpm: 60,
+      instruments: [
+        {
+          sample: { name: 'test.wav' },
+          on: ['4n'], // Quarter note
+          with: [],
+        },
+      ],
+    }
+
+    await engine.start()
+
+    const sampleEvents = getEventsByType('sample')
+    expect(sampleEvents).toHaveLength(1)
+
+    // At 60 BPM: 4n = (60/60) * 1 = 1 second (vs 0.5s at 120 BPM)
+    expect(sampleEvents[0]?.time).toBe(1)
+
+    // Verify timing using expectEventAtBeat with correct BPM
+    const event = expectEventAtBeat('4n', 'sample', 60)
+    expect(event).toBeDefined()
+    expect(event?.time).toBe(1)
+  })
+
   describe('Sample instrument scheduling', () => {
     it('schedules sample triggers at correct beat times', async () => {
       // Configure engine with sample instrument
@@ -90,11 +117,11 @@ describe('Engine Scheduling', () => {
       const sampleEvents = getEventsByType('sample')
       expect(sampleEvents).toHaveLength(4)
 
-      // Verify timing sequence
-      expect(sampleEvents[0]?.time).toBe(0) // 1n = 0
-      expect(sampleEvents[1]?.time).toBe(2) // 2n = 2
-      expect(sampleEvents[2]?.time).toBe(4) // 3n = 4
-      expect(sampleEvents[3]?.time).toBe(6) // 4n = 6
+      // Verify timing sequence (events sorted by time: 4n=0.5s, 3n≈0.67s, 2n=1s, 1n=2s)
+      expect(sampleEvents[0]?.time).toBe(0.5) // 4n = 0.5 seconds
+      expect(sampleEvents[1]?.time).toBeCloseTo(0.67, 1) // 3n ≈ 0.67 seconds
+      expect(sampleEvents[2]?.time).toBe(1) // 2n = 1 second
+      expect(sampleEvents[3]?.time).toBe(2) // 1n = 2 seconds
     })
   })
 
@@ -126,7 +153,7 @@ describe('Engine Scheduling', () => {
       // Check first note
       expect(synthEvents[0]).toMatchObject({
         type: 'synth',
-        time: 0, // beat 1n
+        time: 2, // beat 1n = 2 seconds at 120 BPM
         note: 'C4',
         duration: '4n',
         method: 'triggerAttackRelease',
