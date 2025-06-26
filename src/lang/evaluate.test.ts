@@ -1,6 +1,7 @@
 import dedent from 'dedent'
 import * as Tone from 'tone'
 import { assert, describe, expect, it, vi } from 'vitest'
+import { ZodError } from 'zod/v4'
 
 import { Engine } from '../ostinato'
 import { execFromEditor } from './evaluate'
@@ -88,6 +89,26 @@ describe('execFromEditor', () => {
       expect(mockEngine.config.instruments).toStrictEqual([
         { sample: { name: 'test.wav' }, on: ['1n'], with: [] },
       ])
+    })
+  })
+
+  describe('Schema validation', () => {
+    it.each([
+      ['missing instruments field', '({ bpm: 120 })'],
+      ['invalid instrument type', '({ instruments: ["not-an-object"] })'],
+      ['invalid bpm type', '({ bpm: "not-a-number", instruments: [] })'],
+      [
+        'invalid effect name',
+        '({ instruments: [{ synth: "FMSynth", on: [], with: [{ name: "badeffect", value: 1 }] }] })',
+      ],
+      ['invalid sample instrument', '({ instruments: [{ sample: { name: "test.wav" } }] })'], // missing 'on' field
+      ['invalid synth instrument', '({ instruments: [{ synth: "FMSynth" }] })'], // missing 'on' field
+    ] as const)('throws ZodError for %s', async (_testName, invalidInput) => {
+      const mockEngine = new Engine({})
+      const spy = vi.spyOn(mockEngine, 'start')
+
+      await expect(execFromEditor(mockEngine, invalidInput, 'typescript')).rejects.toThrow(ZodError)
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 })
