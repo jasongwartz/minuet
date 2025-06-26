@@ -23,7 +23,7 @@ type NodeCreator = {
   [K in EffectName]: NodeWithProperties<EffectNameToNodeType[K]>
 }
 
-const nodeCreators: NodeCreator = {
+const getNodeCreators = (): NodeCreator => ({
   distortion: {
     min: 0,
     max: 1,
@@ -63,7 +63,7 @@ const nodeCreators: NodeCreator = {
     update: (node, value) => (node.volume.value = value),
     connect: (source, node) => source.connect(node.volume),
   },
-} as const
+})
 
 export class EffectWrapper<T extends EffectName> {
   private nodeMetadata: NodeCreator[T]
@@ -72,7 +72,7 @@ export class EffectWrapper<T extends EffectName> {
 
   constructor(nodeName: T) {
     this.name = nodeName
-    this.nodeMetadata = nodeCreators[this.name]
+    this.nodeMetadata = getNodeCreators()[this.name]
     this.node = this.nodeMetadata.create()
   }
 
