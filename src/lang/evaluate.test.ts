@@ -64,4 +64,24 @@ describe('execFromEditor', () => {
     ).rejects.toThrowError(ReferenceError)
     expect(spy).not.toHaveBeenCalled()
   })
+
+  describe.each([
+    ['typescript', '({ bpm: 120, instruments: [{ sample: { name: "test.wav" }, on: ["1n"] }] })'],
+    ['yaml', 'bpm: 120\ninstruments:\n  - sample:\n      name: test.wav\n    on:\n      - "1n"'],
+  ] as const)('language support: %s', (language, validInput) => {
+    it('should parse valid input and set engine config', async () => {
+      const mockPlayer = new Tone.Player()
+      const mockEngine = new Engine({ 'test.wav': mockPlayer })
+      const spy = vi.spyOn(mockEngine, 'start')
+
+      await execFromEditor(mockEngine, validInput, language)
+
+      expect(spy).toHaveBeenCalledOnce()
+      assert('config' in mockEngine && mockEngine.config)
+      expect(mockEngine.config.bpm).toBe(120)
+      expect(mockEngine.config.instruments).toStrictEqual([
+        { sample: { name: 'test.wav' }, on: ['1n'], with: [] }
+      ])
+    })
+  })
 })
