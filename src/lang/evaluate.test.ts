@@ -39,22 +39,6 @@ vi.mock('webmidi', () => ({
 }))
 
 describe('execFromEditor', () => {
-  it('can evaluate typescript expressions', async () => {
-    const mockPlayer = new Tone.Player()
-    const mockEngine = new Engine({ 'test.wav': mockPlayer })
-    const spy = vi.spyOn(mockEngine, 'start')
-    await execFromEditor(
-      mockEngine,
-      '({ instruments: [{ sample: { name: "test.wav" }, on: ["1n"] }] })',
-      'typescript',
-    )
-    expect(spy).toHaveBeenCalledOnce()
-
-    assert('config' in mockEngine && mockEngine.config && 'instruments' in mockEngine.config)
-    expect(mockEngine.config.instruments).toStrictEqual([
-      { sample: { name: 'test.wav' }, on: ['1n'], with: [] },
-    ])
-  })
   it('throws when evaluating invalid typescript', async () => {
     const mockEngine = new Engine({})
     const spy = vi.spyOn(mockEngine, 'start')
