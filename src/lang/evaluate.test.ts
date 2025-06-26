@@ -1,6 +1,7 @@
 import dedent from 'dedent'
 import * as Tone from 'tone'
 import { assert, describe, expect, it, vi } from 'vitest'
+import { YAMLParseError } from 'yaml'
 import { ZodError } from 'zod/v4'
 
 import { Engine } from '../ostinato'
@@ -110,5 +111,43 @@ describe('execFromEditor', () => {
       await expect(execFromEditor(mockEngine, invalidInput, 'typescript')).rejects.toThrow(ZodError)
       expect(spy).not.toHaveBeenCalled()
     })
+  })
+
+  describe('syntax errors', () => {
+    it.each([
+      {
+        language: 'typescript',
+        syntax: '({ unclosed: ',
+        errorType: SyntaxError,
+        description: 'unclosed object',
+      },
+      {
+        language: 'typescript',
+        syntax: 'invalid javascript syntax',
+        errorType: ReferenceError,
+        description: 'invalid reference',
+      },
+      {
+        language: 'yaml',
+        syntax: '{ "unclosed": ',
+        errorType: YAMLParseError,
+        description: 'unclosed JSON in YAML',
+      },
+      {
+        language: 'yaml',
+        syntax: 'bpm: 120\n  invalid_indentation: true',
+        errorType: YAMLParseError,
+        description: 'invalid indentation',
+      },
+    ] as const)(
+      'throws $errorType for $description in $language',
+      async ({ language, syntax, errorType }) => {
+        const mockEngine = new Engine({})
+        const spy = vi.spyOn(mockEngine, 'start')
+
+        await expect(execFromEditor(mockEngine, syntax, language)).rejects.toThrow(errorType)
+        expect(spy).not.toHaveBeenCalled()
+      },
+    )
   })
 })
