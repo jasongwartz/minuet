@@ -1,3 +1,4 @@
+import dedent from 'dedent'
 import * as Tone from 'tone'
 import { assert, describe, expect, it, vi } from 'vitest'
 
@@ -50,8 +51,29 @@ describe('execFromEditor', () => {
   })
 
   describe.each([
-    ['typescript', '({ bpm: 120, instruments: [{ sample: { name: "test.wav" }, on: ["1n"] }] })'],
-    ['yaml', 'bpm: 120\ninstruments:\n  - sample:\n      name: test.wav\n    on:\n      - "1n"'],
+    [
+      'typescript',
+      dedent`
+        ({
+          bpm: 120,
+          instruments: [{
+            sample: { name: "test.wav" },
+            on: ["1n"]
+          }]
+        })
+      `,
+    ],
+    [
+      'yaml',
+      dedent`
+        bpm: 120
+        instruments:
+          - sample:
+              name: test.wav
+            on:
+              - "1n"
+      `,
+    ],
   ] as const)('language support: %s', (language, validInput) => {
     it('should parse valid input and set engine config', async () => {
       const mockPlayer = new Tone.Player()
@@ -64,7 +86,7 @@ describe('execFromEditor', () => {
       assert('config' in mockEngine && mockEngine.config)
       expect(mockEngine.config.bpm).toBe(120)
       expect(mockEngine.config.instruments).toStrictEqual([
-        { sample: { name: 'test.wav' }, on: ['1n'], with: [] }
+        { sample: { name: 'test.wav' }, on: ['1n'], with: [] },
       ])
     })
   })
