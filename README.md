@@ -1,27 +1,99 @@
-# React + TypeScript + Vite
+# Minuet
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Minuet is a programming environment for live-coding music in programming languages in the browser. Minuet has support for samples, software synths, effects, MIDI controller input, and playing external MIDI devices like analog synthesizers.
 
-Currently, two official plugins are available:
+## Usage
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+You can start making music with code at: https://minuet.gwartz.me
 
-## Expanding the ESLint configuration
+## Developing
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Minuet is built with the Web Audio API (via [Tone.js](https://tonejs.github.io/)) and the Web MIDI API (via [WEBMIDI.js](https://webmidijs.org/)).
 
-- Configure the top-level `parserOptions` property like this:
+### Architecture
 
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
+- **Audio Engine ("Ostinato")**: Audio engine handling playback, scheduling, and effects
+- **Language Plugins**: Execution environments for different programming languages
+- **Monaco Editor**: Code editor with syntax highlighting and shortcuts
+- **Sample Management**: Audio sample loading and caching system
+
+### Supported Languages
+
+- TypeScript: evaulated and executed directly in the browser
+- Python: executed in WASM via [Pyodide](https://pyodide.org/)
+- YAML: for basic compositions, write the desired data structure directly
+
+### Getting Started
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/jasongwartz/minuet
+cd minuet
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
+
+4. Open your browser to `http://localhost:5173`
+
+- `npm run test` - Run test suite
+
+### Development Workflow
+
+- **Code Style**: Follow the existing TypeScript/React patterns
+- **Linting**: Run `npm run lint` before committing
+- **Type Safety**: Ensure `npm run typecheck` passes
+- **Testing**: Add tests for new features using Vitest, make sure all tests are passing with `npm test`
+
+#### Adding New Language Support
+
+Create a new language plugin in `src/lang/evaluate.ts` like so:
+
+```typescript
+export const PLUGINS = {
+  // existing plugins...
+  newlang: {
+    name: 'New Language',
+    render: async (contents: string) => {
+      // Implementation goes here.
+      // The "contents" argument will be the string of everything
+      // in the developer pane in the editor. The render() function
+      // should execute/evaluate the code and return a JavaScript object,
+      // which will be validated against the schema.
+    },
+  },
+}
+```
+
+### Sample Management
+
+Audio samples are located in `public/samples/`. The development server includes a custom Vite plugin that:
+
+- Serves samples from the public directory
+- Handles audio file caching
+
+To add new samples:
+
+1. Place audio files in `public/samples/`
+1. Samples will appear in the sidebar after reloading the page
+
+## Contributing
+
+Contributions are welcome! Please open an issue to get feedback on your idea before making a PR.
+
+## Acknowledgments
+
+- Built with [Tone.js](https://tonejs.github.io/) for Web Audio
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) for code editing
+- [Pyodide](https://pyodide.org/) for Python in the browser
+- [shadcn/ui](https://ui.shadcn.com/) for UI components
