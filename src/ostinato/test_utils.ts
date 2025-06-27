@@ -28,7 +28,30 @@ export function expectEventAtBeat(
   const expectedTime = (() => {
     const secondsPerBeat = 60 / bpm
 
-    // Handle note durations (e.g., "1n", "2n", "4n")
+    // Handle bars:beats:sixteenths format (e.g., "0:2:1", "1:0:0")
+    const positionRegex = /^(\d+):(\d+):(\d+)$/
+    const positionMatch = positionRegex.exec(beat)
+    if (positionMatch?.[1] && positionMatch[2] && positionMatch[3]) {
+      const bars = parseInt(positionMatch[1], 10)
+      const beats = parseInt(positionMatch[2], 10)
+      const sixteenths = parseInt(positionMatch[3], 10)
+
+      // Calculate total time in seconds
+      const beatsPerBar = 4
+      const sixteenthsPerBeat = 4
+
+      const totalBeats = bars * beatsPerBar + beats + sixteenths / sixteenthsPerBeat
+      return totalBeats * secondsPerBeat
+    }
+
+    // Handle shorthand formats (e.g., "0" = "0:0:0", "2" = "0:2:0")
+    const beatNumber = parseInt(beat, 10)
+    if (!isNaN(beatNumber)) {
+      // Simple beat number within first bar
+      return beatNumber * secondsPerBeat
+    }
+
+    // Handle note durations (e.g., "4n") - keeping for backward compatibility
     const noteRegex = /^(\d+)n$/i
     const noteMatch = noteRegex.exec(beat)
     if (noteMatch?.[1]) {
@@ -42,7 +65,7 @@ export function expectEventAtBeat(
       }
     }
 
-    // Handle measures (e.g., "4m")
+    // Handle measures (e.g., "4m") - keeping for backward compatibility
     const measureRegex = /^(\d+)m$/i
     const measureMatch = measureRegex.exec(beat)
     if (measureMatch?.[1]) {

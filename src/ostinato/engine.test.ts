@@ -44,7 +44,7 @@ describe('Engine Scheduling', () => {
       instruments: [
         {
           sample: { name: 'test.wav' },
-          on: ['4n'], // Quarter note
+          on: ['1'], // Second beat (0-indexed)
           with: [],
         },
       ],
@@ -55,11 +55,11 @@ describe('Engine Scheduling', () => {
     const sampleEvents = getEventsByType('sample')
     expect(sampleEvents).toHaveLength(1)
 
-    // At 60 BPM: 4n = (60/60) * 1 = 1 second (vs 0.5s at 120 BPM)
+    // At 60 BPM: beat 1 = 1 * (60/60) = 1 second (vs 0.5s at 120 BPM)
     expect(sampleEvents[0]?.time).toBe(1)
 
     // Verify timing using expectEventAtBeat with correct BPM
-    const event = expectEventAtBeat('4n', 'sample', 60)
+    const event = expectEventAtBeat('1', 'sample', 60)
     expect(event).toBeDefined()
     expect(event?.time).toBe(1)
   })
@@ -67,12 +67,14 @@ describe('Engine Scheduling', () => {
   describe('Sample instrument scheduling', () => {
     it('schedules sample triggers at correct beat times', async () => {
       // Configure engine with sample instrument
+      // Note: 'on' defines positions within bars, not durations
+      // '0' = first beat (0:0:0), '2' = third beat (0:2:0)
       engine.config = {
         bpm: 120,
         instruments: [
           {
             sample: { name: 'test.wav' },
-            on: ['1n', '3n'],
+            on: ['0', '2'], // First beat and third beat
             with: [],
           },
         ],
@@ -85,15 +87,15 @@ describe('Engine Scheduling', () => {
       const sampleEvents = getEventsByType('sample')
       expect(sampleEvents).toHaveLength(2)
 
-      // Check first sample at beat 1
-      const firstEvent = expectEventAtBeat('1n', 'sample')
+      // Check first sample at beat 0
+      const firstEvent = expectEventAtBeat('0', 'sample')
       expect(firstEvent).toBeDefined()
       expect(firstEvent?.type).toBe('sample')
       expect(firstEvent?.instrument).toBe('test.wav')
       expect(firstEvent?.method).toBe('start')
 
-      // Check second sample at beat 3
-      const secondEvent = expectEventAtBeat('3n', 'sample')
+      // Check second sample at beat 2
+      const secondEvent = expectEventAtBeat('2', 'sample')
       expect(secondEvent).toBeDefined()
       expect(secondEvent?.type).toBe('sample')
       expect(secondEvent?.instrument).toBe('test.wav')
@@ -106,7 +108,7 @@ describe('Engine Scheduling', () => {
         instruments: [
           {
             sample: { name: 'test.wav' },
-            on: ['1n', '2n', '3n', '4n'],
+            on: ['0', '1', '2', '3'], // Four beats of first bar
             with: [],
           },
         ],
@@ -117,11 +119,11 @@ describe('Engine Scheduling', () => {
       const sampleEvents = getEventsByType('sample')
       expect(sampleEvents).toHaveLength(4)
 
-      // Verify timing sequence (events sorted by time: 4n=0.5s, 3n≈0.67s, 2n=1s, 1n=2s)
-      expect(sampleEvents[0]?.time).toBe(0.5) // 4n = 0.5 seconds
-      expect(sampleEvents[1]?.time).toBeCloseTo(0.67, 1) // 3n ≈ 0.67 seconds
-      expect(sampleEvents[2]?.time).toBe(1) // 2n = 1 second
-      expect(sampleEvents[3]?.time).toBe(2) // 1n = 2 seconds
+      // Verify timing sequence (events sorted by time: 0=0s, 1=0.5s, 2=1s, 3=1.5s)
+      expect(sampleEvents[0]?.time).toBe(0) // beat 0 = 0 seconds
+      expect(sampleEvents[1]?.time).toBe(0.5) // beat 1 = 0.5 seconds
+      expect(sampleEvents[2]?.time).toBe(1) // beat 2 = 1 second
+      expect(sampleEvents[3]?.time).toBe(1.5) // beat 3 = 1.5 seconds
     })
   })
 
@@ -135,7 +137,7 @@ describe('Engine Scheduling', () => {
             on: [
               {
                 notes: ['C4', 'E4'],
-                beat: '1n',
+                beat: '0', // First beat
                 duration: '4n',
                 mode: 'once',
               },
@@ -153,7 +155,7 @@ describe('Engine Scheduling', () => {
       // Check first note
       expect(synthEvents[0]).toMatchObject({
         type: 'synth',
-        time: 2, // beat 1n = 2 seconds at 120 BPM
+        time: 0, // beat 0 = 0 seconds at 120 BPM
         note: 'C4',
         duration: '4n',
         method: 'triggerAttackRelease',

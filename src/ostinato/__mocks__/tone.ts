@@ -2,12 +2,40 @@ import { vi } from 'vitest'
 
 import { scheduledEvents } from '../test_utils'
 
-const mockTime = (timeString: string) => ({
+const mockTime = (timeString: string | number) => ({
   toSeconds: (): number => {
     const currentBPM = mockTransport.bpm.value
     const secondsPerBeat = 60 / currentBPM
 
-    // Handle note durations (e.g., "1n", "2n", "4n")
+    // If it's already a number (seconds), return it directly
+    if (typeof timeString === 'number') {
+      return timeString
+    }
+
+    // Handle bars:beats:sixteenths format (e.g., "0:2:1", "1:0:0")
+    const positionRegex = /^(\d+):(\d+):(\d+)$/
+    const positionMatch = positionRegex.exec(timeString)
+    if (positionMatch?.[1] && positionMatch[2] && positionMatch[3]) {
+      const bars = parseInt(positionMatch[1], 10)
+      const beats = parseInt(positionMatch[2], 10)
+      const sixteenths = parseInt(positionMatch[3], 10)
+
+      // Calculate total time in seconds
+      const beatsPerBar = 4
+      const sixteenthsPerBeat = 4
+
+      const totalBeats = bars * beatsPerBar + beats + sixteenths / sixteenthsPerBeat
+      return totalBeats * secondsPerBeat
+    }
+
+    // Handle shorthand formats (e.g., "0" = "0:0:0", "2" = "0:2:0")
+    const beatNumber = parseInt(timeString, 10)
+    if (!isNaN(beatNumber)) {
+      // Simple beat number within first bar
+      return beatNumber * secondsPerBeat
+    }
+
+    // Handle note durations (e.g., "4n") - keeping for backward compatibility
     const noteRegex = /^(\d+)n$/i
     const noteMatch = noteRegex.exec(timeString)
     if (noteMatch?.[1]) {
@@ -21,7 +49,7 @@ const mockTime = (timeString: string) => ({
       }
     }
 
-    // Handle measures (e.g., "4m")
+    // Handle measures (e.g., "4m") - keeping for backward compatibility
     const measureRegex = /^(\d+)m$/i
     const measureMatch = measureRegex.exec(timeString)
     if (measureMatch?.[1]) {
@@ -34,6 +62,12 @@ const mockTime = (timeString: string) => ({
     return parseFloat(timeString) || 0
   },
   toBarsBeatsSixteenths: (): string => {
+    // If already in bars:beats:sixteenths format, return as-is
+    const formatRegex = /^\d+:\d+:\d+$/
+    if (typeof timeString === 'string' && formatRegex.exec(timeString)) {
+      return timeString
+    }
+
     // Convert the time to seconds first, then to bars:beats:sixteenths
     const timeInSeconds = mockTime(timeString).toSeconds()
     const currentBPM = mockTransport.bpm.value
