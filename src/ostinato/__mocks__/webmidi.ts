@@ -10,14 +10,14 @@ const mockMidiOutput = {
       note,
       duration: options.duration,
       method: 'playNote',
-      instrument: 'midi'
+      instrument: 'midi',
     })
-  })
+  }),
 }
 
 export const WebMidi = {
   enable: vi.fn().mockResolvedValue({
     outputs: [mockMidiOutput],
-    inputs: []
-  })
+    inputs: [],
+  }),
 }

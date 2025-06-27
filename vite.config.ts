@@ -2,16 +2,16 @@ import react from '@vitejs/plugin-react'
 import { createReadStream } from 'fs'
 import { readdir } from 'fs/promises'
 import { join } from 'path'
-import { defineConfig } from 'vitest/config'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
     server: {
       deps: {
-        external: ['typescript']
-      }
-    }
+        external: ['typescript'],
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
