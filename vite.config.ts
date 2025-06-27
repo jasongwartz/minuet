@@ -22,7 +22,7 @@ export default defineConfig({
     {
       name: 'local-samples',
       async configureServer(server) {
-        const files = await readdir(join(__dirname, 'public/samples'))
+        const files = await readdir(join(__dirname, 'public/samples')).catch(() => [])
         server.middlewares.use('/samples/list', (_, res) => {
           res.end(
             JSON.stringify(
