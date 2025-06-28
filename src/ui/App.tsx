@@ -1,6 +1,7 @@
 import './App.css'
 
 import type { OnMount } from '@monaco-editor/react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
@@ -19,6 +20,7 @@ import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
 import defaultPython from './default_python.txt?raw'
 import defaultTs from './default_ts.txt?raw'
+import { createProjectWithVersion, db, updateProjectCode } from './idb'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
 import {
@@ -26,6 +28,7 @@ import {
   editorLanguageAtom,
   evaluatingStatusIndicatorAtom,
   schedulingStatusIndicatorAtom,
+  selectedProjectAtom,
 } from './state'
 
 const App = () => {
@@ -99,6 +102,13 @@ const App = () => {
     editorLanguageRef.current = editorLanguage
   })
 
+  const projects = useLiveQuery(() => db.projects.toArray())
+  // const selectedProjectIdRef = useRef<string>()
+  const [selectedProjectId, setSelectedProjectId] = useAtom(selectedProjectAtom)
+  // const project = useLiveQuery(() =>
+  //   selectedProjectId ? db.projects.where('id').equals(selectedProjectId) : undefined,
+  // )
+
   const onEditorMount: OnMount = (editor, monaco) => {
     monaco.editor.setTheme('vs-light')
 
@@ -115,12 +125,27 @@ const App = () => {
       execFromEditor(engineRef.current, editor.getValue(), editorLanguageRef.current)
         .then(async () => {
           await editor.getAction('editor.action.formatDocument')?.run()
-          setTimeout(() => {
-            setEvaluatingStatusIndicator({
-              colour: 'bg-gray-200',
-              text: `${Date.now() - start}ms`,
-            })
-          }, 100)
+          if (selectedProjectId) {
+            await updateProjectCode(selectedProjectId, editor.getValue())
+          } else {
+            const newProjectVersion = await createProjectWithVersion(
+              editorLanguage,
+              editor.getValue(),
+            )
+            setTimeout(() => {
+              // Save project code to db
+              console.log('new projectv', newProjectVersion)
+              setSelectedProjectId(newProjectVersion.projectId)
+              console.log('pid now', newProjectVersion.projectId, selectedProjectId)
+            }, 100)
+
+            setTimeout(() => {
+              setEvaluatingStatusIndicator({
+                colour: 'bg-gray-200',
+                text: `${Date.now() - start}ms`,
+              })
+            }, 100)
+          }
         })
         .catch((err: unknown) => {
           setEvaluatingStatusIndicator({
@@ -166,6 +191,11 @@ const App = () => {
                 .catch(console.error)
             }
           }}
+          onProjectChange={(projectId) => {
+            setSelectedProjectId(projectId)
+          }}
+          projects={projects?.map((p) => p.id) ?? []}
+          selectedProjectId={selectedProjectId}
         />
         <div className='w-full min-w-0'>
           <Header />
