@@ -1,7 +1,10 @@
 import react from '@vitejs/plugin-react'
+import { execFile } from 'child_process'
 import { createReadStream } from 'fs'
-import { readdir } from 'fs/promises'
+import { access, mkdtemp, readdir } from 'fs/promises'
+import { tmpdir } from 'os'
 import { join } from 'path'
+import { promisify } from 'util'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 
@@ -13,9 +16,6 @@ export default defineConfig({
       },
     },
   },
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-  },
   plugins: [
     react(),
     tsconfigPaths(),
@@ -23,6 +23,13 @@ export default defineConfig({
       name: 'local-samples',
       async configureServer(server) {
         const files = await readdir(join(__dirname, 'public/samples')).catch(() => [])
+        const transcodingTempDir = await mkdtemp(join(tmpdir(), 'transcoding-'))
+        const ffmpegAvailable = await promisify(execFile)('ffmpeg', ['-version']).then(
+          () => true,
+          () => false,
+        )
+        const execFileAsync = promisify(execFile)
+
         server.middlewares.use('/samples/list', (_, res) => {
           res.end(
             JSON.stringify(
@@ -30,63 +37,45 @@ export default defineConfig({
             ),
           )
         })
-        server.middlewares.use((req, res, next) => {
-          if (req.url?.includes('/samples')) {
-            const pathComponents = req.url.split('/')
-            const filename = pathComponents[pathComponents.length - 1]
-            const decodedFilename = decodeURIComponent(filename)
-            
-            if (decodedFilename.endsWith('.wav')) {
-              // Serve WAV files directly
-              const filePath = join(__dirname, 'public/samples/', decodedFilename)
-              console.log('returning sample at:', filePath)
-              const stream = createReadStream(filePath)
-              stream.on('error', next)
-              stream.pipe(res)
-            } else if (decodedFilename.endsWith('.caf')) {
-              // Convert CAF files transparently
-              (async (): Promise<void> => {
-                try {
-                  const filePath = join(__dirname, 'public/samples/', decodedFilename)
-                  console.log('converting CAF file:', filePath)
-                  
-                  // Dynamic imports for FFmpeg modules
-                  const ffmpegModule = await import('@ffmpeg/ffmpeg')
-                  const utilModule = await import('@ffmpeg/util')
-                  
-                  // Extract from modules
-                  const { FFmpeg } = ffmpegModule
-                  const { fetchFile } = utilModule
-                  
-                  // Initialize FFmpeg
-                  const ffmpeg = new FFmpeg()
-                  await ffmpeg.load()
-                  
-                  // Load the CAF file
-                  const fileData = await fetchFile(filePath)
-                  const inputName = 'input.caf'
-                  const outputName = 'output.mp3'
-                  
-                  await ffmpeg.writeFile(inputName, new Uint8Array(fileData))
-                  await ffmpeg.exec(['-i', inputName, outputName])
-                  const outputData = await ffmpeg.readFile(outputName)
-                  
-                  if (outputData instanceof Uint8Array) {
-                    res.setHeader('Content-Type', 'audio/mp3')
-                    res.setHeader('Content-Length', outputData.length.toString())
-                    res.end(Buffer.from(outputData))
-                  } else {
-                    throw new Error('Unexpected output format')
-                  }
-                } catch (error) {
-                  console.error('CAF conversion error:', error)
-                  res.statusCode = 500
-                  res.end(`CAF conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                }
-              })().catch(next)
-            } else {
-              next()
+        server.middlewares.use('/samples', (req, res, next) => {
+          if (!req.url) {
+            next()
+            return
+          }
+          const pathComponents = req.url.split('/')
+          const filename = pathComponents[pathComponents.length - 1]
+          const decodedFilename = decodeURIComponent(filename)
+          const filePath = join(__dirname, 'public/samples/', decodedFilename)
+          if (decodedFilename.endsWith('.wav')) {
+            // Serve WAV files directly
+            console.log('returning sample at:', filePath)
+            res.setHeader('Content-Type', 'audio/wav')
+            const stream = createReadStream(filePath)
+            stream.on('error', next)
+            stream.pipe(res)
+          } else if (decodedFilename.endsWith('.caf')) {
+            if (!ffmpegAvailable) {
+              res.statusCode = 500
+              res.end(
+                'CAF conversion failed: FFmpeg not found. Please install FFmpeg on your system.',
+              )
+              return
             }
+            // Convert CAF files transparently using system FFmpeg
+            const outputFilename = decodedFilename.replace('.caf', '.mp3')
+            const outputPath = join(transcodingTempDir, outputFilename)
+            void access(outputPath)
+              .catch(async () => {
+                const start = Date.now()
+                await execFileAsync('ffmpeg', ['-i', filePath, '-acodec', 'mp3', outputPath])
+                console.log(`Transcoded file "${filePath}" in ${Date.now() - start}ms`)
+              })
+              .then(() => {
+                res.setHeader('Content-Type', 'audio/mp3')
+                const stream = createReadStream(outputPath)
+                stream.on('error', next)
+                stream.pipe(res)
+              })
           } else {
             next()
           }

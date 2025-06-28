@@ -67,10 +67,5 @@
     "vite": "^5.4.5",
     "vite-tsconfig-paths": "^5.0.1",
     "vitest": "^2.1.4"
-  },
-  "optionalDependencies": {
-    "@ffmpeg/core": "^0.12.6",
-    "@ffmpeg/ffmpeg": "^0.12.10",
-    "@ffmpeg/util": "^0.12.1"
   }
 }
