@@ -49,6 +49,7 @@ export const loadSample = async (sample: SampleDetails) => {
   if (cached) {
     blob = cached.blob
   } else {
+    // CAF files will be transparently converted by server middleware
     const response = await fetch(sample.url)
     blob = await response.blob()
     await db.samples.put({
@@ -58,59 +59,10 @@ export const loadSample = async (sample: SampleDetails) => {
     })
   }
   const blobUrl = URL.createObjectURL(blob)
-
-  if (sample.url.endsWith('caf')) {
-    try {
-      await player.load(await convertCafToMp3(sample.name, blobUrl))
-    } catch (error) {
-      console.warn(`Cannot load CAF file ${sample.name}:`, error)
-      throw new Error(
-        `CAF file support requires FFmpeg. Please install optional dependencies: npm install @ffmpeg/core @ffmpeg/ffmpeg @ffmpeg/util, or convert ${sample.name} to MP3/WAV format.`,
-      )
-    }
-  } else {
-    await player.load(blobUrl)
-  }
+  await player.load(blobUrl)
   URL.revokeObjectURL(blobUrl)
 
   console.log(`loaded: ${sample.name}`)
   return { ...sample, player }
 }
 
-// Simple CAF to MP3 conversion with error for missing FFmpeg
-const convertCafToMp3 = async (name: string, url: string): Promise<string> => {
-  try {
-    // Try to dynamically import FFmpeg modules
-    const [ffmpegModule, utilModule, coreModule, wasmModule] = await Promise.all([
-      import('@ffmpeg/ffmpeg'),
-      import('@ffmpeg/util'),
-      import('@ffmpeg/core?url'),
-      import('@ffmpeg/core/wasm?url'),
-    ])
-
-    // Use the modules directly without complex typing
-    const { FFmpeg } = ffmpegModule
-    const { fetchFile } = utilModule
-
-    const ffmpeg = new FFmpeg()
-    await ffmpeg.load({
-      coreURL: coreModule.default,
-      wasmURL: wasmModule.default,
-    })
-
-    const fileData = await fetchFile(url)
-    await ffmpeg.writeFile(name, new Uint8Array(fileData))
-    await ffmpeg.exec(['-i', name, name + '.mp3'])
-    const outputData = await ffmpeg.readFile(name + '.mp3')
-
-    if (outputData instanceof Uint8Array) {
-      return URL.createObjectURL(new Blob([outputData.buffer], { type: 'audio/mp3' }))
-    }
-
-    throw new Error('Unexpected output format from FFmpeg')
-  } catch (error) {
-    throw new Error(
-      `FFmpeg not available. Install optional dependencies: npm install @ffmpeg/core @ffmpeg/ffmpeg @ffmpeg/util, or convert ${name} to MP3/WAV format. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    )
-  }
-}
