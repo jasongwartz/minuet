@@ -2,10 +2,17 @@ import react from '@vitejs/plugin-react'
 import { createReadStream } from 'fs'
 import { readdir } from 'fs/promises'
 import { join } from 'path'
-import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  test: {
+    server: {
+      deps: {
+        external: ['typescript'],
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
@@ -15,7 +22,7 @@ export default defineConfig({
     {
       name: 'local-samples',
       async configureServer(server) {
-        const files = await readdir(join(__dirname, 'public/samples'))
+        const files = await readdir(join(__dirname, 'public/samples')).catch(() => [])
         server.middlewares.use('/samples/list', (_, res) => {
           res.end(
             JSON.stringify(
