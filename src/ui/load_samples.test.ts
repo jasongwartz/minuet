@@ -1,7 +1,7 @@
 import * as Tone from 'tone'
-import { beforeEach,describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getSamples,loadSample } from './load_samples'
+import { getSamples, loadSample } from './load_samples'
 
 vi.mock('tone', () => ({
   Player: class MockPlayer {
@@ -19,7 +19,10 @@ vi.mock('./idb', () => ({
           first: mockDbFirst,
         }),
       }),
-      put: () => Promise.resolve({ /* mock */ }),
+      put: () =>
+        Promise.resolve({
+          /* mock */
+        }),
     },
   },
 }))
@@ -44,13 +47,14 @@ describe('getSamples', () => {
 
   it('should filter out invalid sample objects', async () => {
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve([
-        { name: 'valid.wav', url: '/samples/valid.wav' },
-        { name: 'missing-url.wav' }, // missing url
-        { url: '/samples/missing-name.wav' }, // missing name
-        { name: 123, url: '/samples/invalid.wav' }, // invalid types
-        { name: 'valid2.caf', url: '/samples/valid2.caf' },
-      ]),
+      json: () =>
+        Promise.resolve([
+          { name: 'valid.wav', url: '/samples/valid.wav' },
+          { name: 'missing-url.wav' }, // missing url
+          { url: '/samples/missing-name.wav' }, // missing name
+          { name: 123, url: '/samples/invalid.wav' }, // invalid types
+          { name: 'valid2.caf', url: '/samples/valid2.caf' },
+        ]),
     })
 
     const result = await getSamples()
@@ -64,11 +68,11 @@ describe('getSamples', () => {
 describe('loadSample', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Mock URL.createObjectURL and URL.revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
     global.URL.revokeObjectURL = vi.fn()
-    
+
     // Mock console.log
     vi.spyOn(console, 'log').mockImplementation(() => undefined)
   })
@@ -89,7 +93,7 @@ describe('loadSample', () => {
 
   it('should handle cached samples', async () => {
     const mockBlob = new Blob(['cached audio data'])
-    
+
     // Mock database returning cached data
     mockDbFirst.mockResolvedValueOnce({
       name: 'cached.wav',
