@@ -131,6 +131,7 @@ const SidebarProvider = React.forwardRef<
         <TooltipProvider delayDuration={0}>
           <div
             style={
+              // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
               {
                 '--sidebar-width': SIDEBAR_WIDTH,
                 '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
@@ -197,6 +198,7 @@ const Sidebar = React.forwardRef<
             data-mobile='true'
             className='w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden'
             style={
+              // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
               {
                 '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
               } as React.CSSProperties
@@ -654,6 +656,7 @@ const SidebarMenuSkeleton = React.forwardRef<
         className='h-4 flex-1 max-w-[--skeleton-width]'
         data-sidebar='menu-skeleton-text'
         style={
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           {
             '--skeleton-width': width,
           } as React.CSSProperties
