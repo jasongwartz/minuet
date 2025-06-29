@@ -1,40 +1,26 @@
 import * as Tone from 'tone'
+import { z } from 'zod'
 
 import { db } from './idb'
 
-interface SampleMetadata {
-  name: string
-  url: string
-}
+const zSampleMetadata = z.object({
+  name: z.string(),
+  url: z.string(),
+})
 
-export const getSamples = async (): Promise<SampleMetadata[]> => {
-  const metadataResponse = await fetch('/samples/list')
-  const data: unknown = await metadataResponse.json()
+type SampleMetadata = z.infer<typeof zSampleMetadata>
 
-  // Validate the data structure
-  if (!Array.isArray(data)) {
-    return []
-  }
-
-  const validSamples: SampleMetadata[] = []
-
-  for (const item of data) {
-    if (typeof item === 'object' && item !== null && 'name' in item && 'url' in item) {
-      // Use Reflect.get to avoid type assertions
-      const nameValue: unknown = Reflect.get(item, 'name')
-      const urlValue: unknown = Reflect.get(item, 'url')
-
-      if (typeof nameValue === 'string' && typeof urlValue === 'string') {
-        validSamples.push({
-          name: nameValue,
-          url: urlValue,
-        })
-      }
-    }
-  }
-
-  return validSamples
-}
+export const getSamples = async (): Promise<SampleMetadata[]> =>
+  fetch('/samples/list')
+    .then((response) => response.json())
+    .then((data) =>
+      Array.isArray(data)
+        ? data
+            .map((item) => zSampleMetadata.safeParse(item))
+            .filter((result) => result.success)
+            .map((result) => result.data)
+        : [],
+    )
 
 export type SampleDetails = Awaited<ReturnType<typeof getSamples>>[number]
 
@@ -65,4 +51,3 @@ export const loadSample = async (sample: SampleDetails) => {
   console.log(`loaded: ${sample.name}`)
   return { ...sample, player }
 }
-
