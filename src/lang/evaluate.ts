@@ -1,5 +1,6 @@
 import { loadPyodide, version as pyodideVersion } from 'pyodide'
 import { transpile } from 'typescript'
+import { LuaFactory } from 'wasmoon'
 import { parse as yamlParse } from 'yaml'
 import { z } from 'zod/v4'
 
@@ -82,6 +83,25 @@ const pythonPlugin: LanguagePlugin = {
   },
 }
 
+const luaFactory = new LuaFactory()
+const luaPlugin: LanguagePlugin = {
+  name: 'Lua',
+  render: async (contents) => {
+    const lua = await luaFactory.createEngine()
+
+    try {
+      const result: unknown = await lua.doString(contents)
+
+      if (result === null || result === undefined) {
+        throw new Error('Lua code must return a value!')
+      }
+      return result
+    } finally {
+      lua.global.close()
+    }
+  },
+}
+
 const yamlPlugin: LanguagePlugin = {
   name: 'YAML',
   render: (contents) => Promise.resolve(yamlParse(contents)),
@@ -91,6 +111,7 @@ export const PLUGINS = {
   pkl: pklPlugin,
   typescript: typescriptPlugin,
   python: pythonPlugin,
+  lua: luaPlugin,
   yaml: yamlPlugin,
 } as const
 
@@ -101,9 +122,14 @@ export const execFromEditor = async (
 ) => {
   const plugin = PLUGINS[editorLanguage]
   console.log(`Rendering input using "${plugin.name}" plugin`)
-  const evalutedOutput = await plugin.render(contents)
 
-  const validation = ostinatoSchema.safeParse(evalutedOutput)
+  if (plugin.register) {
+    await plugin.register()
+  }
+
+  const evaluatedOutput = await plugin.render(contents)
+
+  const validation = ostinatoSchema.safeParse(evaluatedOutput)
   if (!validation.success) {
     console.error(z.prettifyError(validation.error))
     throw validation.error
