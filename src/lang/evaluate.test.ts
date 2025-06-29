@@ -5,7 +5,7 @@ import { YAMLParseError } from 'yaml'
 import { ZodError } from 'zod/v4'
 
 import { Engine } from '../ostinato'
-import { execFromEditor } from './evaluate'
+import { execFromEditor, PLUGINS } from './evaluate'
 
 vi.mock('tone', () => ({
   start: vi.fn(),
@@ -60,7 +60,7 @@ describe('execFromEditor', () => {
           bpm: 120,
           instruments: [{
             sample: { name: "test.wav" },
-            on: ["1n"]
+            on: [0]
           }]
         })
       `,
@@ -73,7 +73,22 @@ describe('execFromEditor', () => {
           - sample:
               name: test.wav
             on:
-              - "1n"
+              - 0
+      `,
+    ],
+    [
+      'lua',
+      dedent`
+        -- Create configuration as Lua table
+        return {
+          bpm = 120,
+          instruments = {
+            {
+              sample = { name = "test.wav" },
+              on = { 0 }
+            }
+          }
+        }
       `,
     ],
   ] as const)('language support: %s', (language, validInput) => {
@@ -88,7 +103,7 @@ describe('execFromEditor', () => {
       assert('config' in mockEngine && mockEngine.config)
       expect(mockEngine.config.bpm).toBe(120)
       expect(mockEngine.config.instruments).toStrictEqual([
-        { sample: { name: 'test.wav' }, on: ['1n'], with: [] },
+        { sample: { name: 'test.wav' }, on: [0], with: [] },
       ])
     })
   })
@@ -139,6 +154,12 @@ describe('execFromEditor', () => {
         errorType: YAMLParseError,
         description: 'invalid indentation',
       },
+      {
+        language: 'lua',
+        syntax: 'return "unclosed string',
+        errorType: Error,
+        description: 'unclosed string',
+      },
     ] as const)(
       'throws $errorType for $description in $language',
       async ({ language, syntax, errorType }) => {
@@ -149,5 +170,80 @@ describe('execFromEditor', () => {
         expect(spy).not.toHaveBeenCalled()
       },
     )
+  })
+})
+
+describe('Language plugin implementations', () => {
+  describe('Lua', () => {
+    const luaPlugin = PLUGINS.lua
+
+    it.each([
+      {
+        description: 'returns number values directly',
+        input: 'return 123',
+        expected: 123,
+      },
+      {
+        description: 'returns string values directly',
+        input: 'return "hello world"',
+        expected: 'hello world',
+      },
+      {
+        description: 'returns boolean values directly',
+        input: 'return true',
+        expected: true,
+      },
+      {
+        description: 'converts Lua tables to JavaScript objects',
+        input: 'return { message = "Hello", count = 42, active = true }',
+        expected: { message: 'Hello', count: 42, active: true },
+      },
+      {
+        description: 'converts nested Lua tables to nested JavaScript objects',
+        input: `
+          return {
+            bpm = 120,
+            instruments = {
+              {
+                sample = { name = "test.wav" },
+                on = { 0 }
+              }
+            }
+          }
+        `,
+        expected: {
+          bpm: 120,
+          instruments: [
+            {
+              sample: { name: 'test.wav' },
+              on: [0],
+            },
+          ],
+        },
+      },
+    ] as const)('$description', async ({ input, expected }) => {
+      const result = await luaPlugin.render(input)
+      expect(result).toEqual(expected)
+    })
+
+    it.each([
+      {
+        description: 'throws when nothing is returned',
+        input: 'local x = 1',
+        expectedError: 'Lua code must return a value!',
+      },
+      {
+        description: 'throws when nil is returned',
+        input: 'return nil',
+        expectedError: 'Lua code must return a value!',
+      },
+      {
+        description: 'throws on syntax errors',
+        input: 'return "unclosed string',
+        expectedError: Error,
+      },
+    ] as const)('$description', async ({ input, expectedError }) => {
+      await expect(luaPlugin.render(input)).rejects.toThrow(expectedError)
+    })
   })
 })
