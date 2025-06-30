@@ -24,12 +24,24 @@ const zEffectValueParam = z.number().or(z.string()).or(zEffectValueFrom)
 
 const zEffectNameBase = z.object({
   name: z.enum([
-    // 'flanger',
-    'lpf',
-    'hpf',
-    'gain',
-    'distortion',
-    'volume',
+    'AutoFilter',
+    'AutoPanner',
+    'AutoWah',
+    'BitCrusher',
+    'Chebyshev',
+    'Chorus',
+    'Distortion',
+    'FeedbackDelay',
+    'FrequencyShifter',
+    'Freeverb',
+    'JCReverb',
+    'PingPongDelay',
+    'PitchShift',
+    'Phaser',
+    'Reverb',
+    'StereoWidener',
+    'Tremolo',
+    'Vibrato',
   ]),
 })
 

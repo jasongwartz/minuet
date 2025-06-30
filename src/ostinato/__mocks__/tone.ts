@@ -210,3 +210,32 @@ export class UserMedia {
     return undefined
   }
 }
+
+// Generic mock effect class for minimal mocking
+class MockEffect {
+  connect = vi.fn()
+  disconnect = vi.fn()
+  set = vi.fn()
+  get = vi.fn(() => ({}))
+  dispose = vi.fn()
+}
+
+// Export all effect classes using the generic mock
+export const AutoFilter = MockEffect
+export const AutoPanner = MockEffect
+export const AutoWah = MockEffect
+export const BitCrusher = MockEffect
+export const Chebyshev = MockEffect
+export const Chorus = MockEffect
+export const Distortion = MockEffect
+export const FeedbackDelay = MockEffect
+export const FrequencyShifter = MockEffect
+export const Freeverb = MockEffect
+export const JCReverb = MockEffect
+export const PingPongDelay = MockEffect
+export const PitchShift = MockEffect
+export const Phaser = MockEffect
+export const Reverb = MockEffect
+export const StereoWidener = MockEffect
+export const Tremolo = MockEffect
+export const Vibrato = MockEffect

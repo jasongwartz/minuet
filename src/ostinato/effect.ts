@@ -1,114 +1,114 @@
 import * as Tone from 'tone'
 
-import type { EffectName } from './schema'
+// 1. Centralized Effect Registry
+export type EffectName = 
+  | 'AutoFilter' | 'AutoPanner' | 'AutoWah' 
+  | 'BitCrusher' | 'Chebyshev' | 'Chorus' 
+  | 'Distortion' | 'FeedbackDelay' | 'FrequencyShifter' 
+  | 'Freeverb' | 'JCReverb' | 'PingPongDelay' 
+  | 'PitchShift' | 'Phaser' | 'Reverb' 
+  | 'StereoWidener' | 'Tremolo' | 'Vibrato'
 
-interface EffectNameToNodeType {
-  distortion: Tone.Distortion
-  hpf: Tone.Filter
-  lpf: Tone.Filter
-  gain: Tone.Gain
-  volume: Tone.Volume
+const EffectClasses: Record<EffectName, new (options?: any) => any> = {
+  AutoFilter: Tone.AutoFilter,
+  AutoPanner: Tone.AutoPanner,
+  AutoWah: Tone.AutoWah,
+  BitCrusher: Tone.BitCrusher,
+  Chebyshev: Tone.Chebyshev,
+  Chorus: Tone.Chorus,
+  Distortion: Tone.Distortion,
+  FeedbackDelay: Tone.FeedbackDelay,
+  FrequencyShifter: Tone.FrequencyShifter,
+  Freeverb: Tone.Freeverb,
+  JCReverb: Tone.JCReverb,
+  PingPongDelay: Tone.PingPongDelay,
+  PitchShift: Tone.PitchShift,
+  Phaser: Tone.Phaser,
+  Reverb: Tone.Reverb,
+  StereoWidener: Tone.StereoWidener,
+  Tremolo: Tone.Tremolo,
+  Vibrato: Tone.Vibrato
 }
 
-interface NodeWithProperties<T> {
-  min: number
-  max: number
-  default: number
-  create: () => T
-  update: (node: T, value: number) => void
-  connect?: (source: Tone.ToneAudioNode, node: T) => void
+// 2. Generic Effect Wrapper Class
+// Mapping from effect name to that effect's options interface and class instance type
+// Note: Some effects don't export their specific Options types, so we use Record<string, unknown>
+interface EffectOptionsMap {
+  AutoFilter: Tone.AutoFilterOptions
+  AutoPanner: Tone.AutoPannerOptions
+  AutoWah: Tone.AutoWahOptions
+  BitCrusher: Tone.BitCrusherOptions
+  Chebyshev: Tone.ChebyshevOptions
+  Chorus: Tone.ChorusOptions
+  Distortion: Tone.DistortionOptions
+  FeedbackDelay: Record<string, unknown> // FeedbackDelayOptions not exported
+  FrequencyShifter: Record<string, unknown> // FrequencyShifterOptions not exported
+  Freeverb: Tone.FreeverbOptions
+  JCReverb: Tone.JCReverbOptions
+  PingPongDelay: Tone.PingPongDelayOptions
+  PitchShift: Tone.PitchShiftOptions
+  Phaser: Tone.PhaserOptions
+  Reverb: Record<string, unknown> // ReverbOptions not exported
+  StereoWidener: Tone.StereoWidenerOptions
+  Tremolo: Tone.TremoloOptions
+  Vibrato: Tone.VibratoOptions
 }
 
-type NodeCreator = {
-  [K in EffectName]: NodeWithProperties<EffectNameToNodeType[K]>
+interface EffectInstanceMap {
+  AutoFilter: Tone.AutoFilter
+  AutoPanner: Tone.AutoPanner
+  AutoWah: Tone.AutoWah
+  BitCrusher: Tone.BitCrusher
+  Chebyshev: Tone.Chebyshev
+  Chorus: Tone.Chorus
+  Distortion: Tone.Distortion
+  FeedbackDelay: Tone.FeedbackDelay
+  FrequencyShifter: Tone.FrequencyShifter
+  Freeverb: Tone.Freeverb
+  JCReverb: Tone.JCReverb
+  PingPongDelay: Tone.PingPongDelay
+  PitchShift: Tone.PitchShift
+  Phaser: Tone.Phaser
+  Reverb: Tone.Reverb
+  StereoWidener: Tone.StereoWidener
+  Tremolo: Tone.Tremolo
+  Vibrato: Tone.Vibrato
 }
 
-const getNodeCreators = (): NodeCreator => ({
-  distortion: {
-    min: 0,
-    max: 1,
-    default: 0,
-    create: () => new Tone.Distortion(),
-    update: (node, value) => (node.distortion = value),
-  },
-  hpf: {
-    default: Tone.Frequency('C8').toFrequency(),
-    min: Tone.Frequency('C2').toFrequency(),
-    max: Tone.Frequency('C8').toFrequency(),
-    create: () => new Tone.Filter(undefined, 'highpass'),
-    update: (node, value) => (node.frequency.value = value),
-    connect: (source, node) => source.connect(node.frequency),
-  },
-  lpf: {
-    default: Tone.Frequency('C1').toFrequency(),
-    min: Tone.Frequency('C1').toFrequency(),
-    max: Tone.Frequency('C8').toFrequency(),
-    create: () => new Tone.Filter(undefined, 'lowpass'),
-    update: (node, value) => (node.frequency.value = value),
-    connect: (source, node) => source.connect(node.frequency),
-  },
-  gain: {
-    default: 1,
-    min: 0,
-    max: 1,
-    create: () => new Tone.Gain(),
-    update: (node, value) => (node.gain.value = value),
-    connect: (source, node) => source.connect(node.gain),
-  },
-  volume: {
-    default: 0,
-    min: -100,
-    max: 0,
-    create: () => new Tone.Volume(),
-    update: (node, value) => (node.volume.value = value),
-    connect: (source, node) => source.connect(node.volume),
-  },
-})
+export class EffectWrapper<Name extends EffectName> {
+  readonly name: Name
+  readonly instance: EffectInstanceMap[Name]
 
-export class EffectWrapper<T extends EffectName> {
-  private nodeMetadata: NodeCreator[T]
-  public node: EffectNameToNodeType[T]
-  public name: T
-
-  constructor(nodeName: T) {
-    this.name = nodeName
-    this.nodeMetadata = getNodeCreators()[this.name]
-    this.node = this.nodeMetadata.create()
+  constructor(name: Name, options?: Partial<EffectOptionsMap[Name]>) {
+    this.name = name
+    const EffectClass = EffectClasses[name] as {
+      new(opts?: Partial<EffectOptionsMap[Name]>): EffectInstanceMap[Name]
+    }
+    this.instance = new EffectClass(options)
   }
 
-  get min() {
-    return this.nodeMetadata.min
+  /** Set a numeric parameter on the effect in a type-safe way */
+  setParam<Key extends keyof EffectOptionsMap[Name]>(
+    paramName: Key, 
+    value: EffectOptionsMap[Name][Key]
+  ): void {
+    this.instance.set({ [paramName as string]: value })
   }
 
-  get max() {
-    return this.nodeMetadata.max
+  /** Connect this effect to another audio node */
+  connect(destination: Tone.ToneAudioNode): void {
+    this.instance.connect(destination)
   }
 
-  get default() {
-    return this.nodeMetadata.default
+  /** Disconnect this effect from all destinations */
+  disconnect(): void {
+    this.instance.disconnect()
   }
 
-  update(value: number) {
-    this.nodeMetadata.update(this.node, value)
-  }
-
-  connect(connector: Tone.ToneAudioNode) {
-    this.nodeMetadata.connect?.(connector, this.node)
+  /** Get the current value of a parameter */
+  getParam<Key extends keyof EffectOptionsMap[Name]>(
+    paramName: Key
+  ): EffectOptionsMap[Name][Key] {
+    return (this.instance.get() as any)[paramName as string] as EffectOptionsMap[Name][Key]
   }
 }
-
-// come back to:
-// (for supporting *any* Tone Effect)
-/*
-type ExtractFilterOptions<T> = T extends Tone.ToneAudioNode<infer U> ? U : never
-type NumberKeys<T> = {
-  [K in keyof T]: T[K] extends number ? K : never
-}[keyof T]
-
-type NumberKeys<T> = {
-  [K in keyof T]: T[K] extends number ? K : never
-}
-
-type D = NumberKeys<ExtractFilterOptions<Tone.Volume>>
-const d: D = {}
-*/
