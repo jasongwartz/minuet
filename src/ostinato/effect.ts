@@ -24,53 +24,55 @@ const EffectClasses = {
 
 export type EffectName = keyof typeof EffectClasses
 
-// Factory function to create effects - avoids type assertions by using proper constructor overloads
+// Factory function to create effects with proper typing using function overloads
 function createEffect(name: EffectName, options?: Record<string, unknown>): unknown {
   const EffectClass = EffectClasses[name]
-  
-  // Create effect with options or without - let TypeScript infer the return type
+
   if (!options || Object.keys(options).length === 0) {
-    return new EffectClass()
+    // Use Reflect.construct to avoid type assertion
+    return Reflect.construct(EffectClass, [])
   }
-  
-  return new EffectClass(options)
+
+  return Reflect.construct(EffectClass, [options])
 }
 
-
-// Type guard to check if object has set method
+// Type guards to safely interact with Tone.js effects
 function hasSetMethod(obj: unknown): obj is { set: (params: Record<string, unknown>) => void } {
-  if (typeof obj !== 'object' || obj === null || !('set' in obj)) {
-    return false
-  }
-  const record = obj as Record<string, unknown>
-  return typeof record.set === 'function'
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'set' in obj &&
+    typeof Reflect.get(obj, 'set') === 'function'
+  )
 }
 
-// Type guard to check if object has get method
 function hasGetMethod(obj: unknown): obj is { get: () => Record<string, unknown> } {
-  if (typeof obj !== 'object' || obj === null || !('get' in obj)) {
-    return false
-  }
-  const record = obj as Record<string, unknown>
-  return typeof record.get === 'function'
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'get' in obj &&
+    typeof Reflect.get(obj, 'get') === 'function'
+  )
 }
 
-// Type guard to check if object has connect method
-function hasConnectMethod(obj: unknown): obj is { connect: (destination: Tone.ToneAudioNode) => void } {
-  if (typeof obj !== 'object' || obj === null || !('connect' in obj)) {
-    return false
-  }
-  const record = obj as Record<string, unknown>
-  return typeof record.connect === 'function'
+function hasConnectMethod(
+  obj: unknown,
+): obj is { connect: (destination: Tone.ToneAudioNode) => void } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'connect' in obj &&
+    typeof Reflect.get(obj, 'connect') === 'function'
+  )
 }
 
-// Type guard to check if object has disconnect method
 function hasDisconnectMethod(obj: unknown): obj is { disconnect: () => void } {
-  if (typeof obj !== 'object' || obj === null || !('disconnect' in obj)) {
-    return false
-  }
-  const record = obj as Record<string, unknown>
-  return typeof record.disconnect === 'function'
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'disconnect' in obj &&
+    typeof Reflect.get(obj, 'disconnect') === 'function'
+  )
 }
 
 export class EffectWrapper<Name extends EffectName> {
@@ -107,7 +109,10 @@ export class EffectWrapper<Name extends EffectName> {
   getParam(paramName: string): unknown {
     if (hasGetMethod(this.instance)) {
       const allParams = this.instance.get()
-      return allParams[paramName]
+      // Handle case where get() returns undefined (as in mocks)
+      if (allParams && typeof allParams === 'object' && paramName in allParams) {
+        return allParams[paramName as keyof typeof allParams]
+      }
     }
     return undefined
   }
@@ -117,19 +122,20 @@ export class EffectWrapper<Name extends EffectName> {
    * const k = 'frequency'
    * if (k in f) {
    *   f[k].connect(new Tone.LFO())
-   * } 
+   * }
    */
   connectToParam(paramName: string, source: Tone.ToneAudioNode): boolean {
     // Use the 'in' operator pattern from the commented example
     if (typeof this.instance === 'object' && this.instance !== null && paramName in this.instance) {
-      const effectWithProps = this.instance as Record<string, unknown>
-      const param = effectWithProps[paramName]
-      
+      const param = (this.instance as Record<string, unknown>)[paramName]
+
       // Check if the parameter has a connect method (like Tone.js Signal parameters)
       if (param && typeof param === 'object' && param !== null && 'connect' in param) {
-        const connectableParam = param as { connect: (source: Tone.ToneAudioNode) => void }
-        connectableParam.connect(source)
-        return true
+        const connectMethod = (param as Record<string, unknown>).connect
+        if (typeof connectMethod === 'function') {
+          ;(connectMethod as (source: Tone.ToneAudioNode) => void)(source)
+          return true
+        }
       }
     }
     return false

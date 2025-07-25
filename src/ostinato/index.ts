@@ -316,7 +316,8 @@ export class Engine {
             }
           } else {
             // Handle static parameter values
-            const paramValue = typeof value === 'string' ? Tone.Frequency(value).toFrequency() : value
+            const paramValue =
+              typeof value === 'string' ? Tone.Frequency(value).toFrequency() : value
             e.setParam(param, paramValue)
           }
         }
@@ -326,7 +327,10 @@ export class Engine {
       // Whatever the previous chain was, disconnect it to avoid duplicate outputs
       // and to allow removing of effects from samples that previously had them.
       audioNodeStartOfChain.disconnect()
-      audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
+      audioNodeStartOfChain.chain(
+        ...effects.map((e) => e.node as Tone.ToneAudioNode),
+        Tone.getDestination(),
+      )
       newTracks.push({ config: instrument, node: audioNodeStartOfChain })
     }
 

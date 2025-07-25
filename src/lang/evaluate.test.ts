@@ -14,7 +14,7 @@ vi.mock('tone', () => {
     set = vi.fn()
     get = vi.fn(() => ({}))
   }
-  
+
   return {
     start: vi.fn(),
     getContext: () => ({ lookAhead: 0 }),
