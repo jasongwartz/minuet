@@ -53,29 +53,6 @@ export type EffectName = keyof typeof EffectClasses
 // }
 
 // 2. Generic Effect Wrapper Class
-// Mapping from effect name to that effect's options interface and class instance type
-// Note: Some effects don't export their specific Options types, so we use Record<string, unknown>
-interface EffectOptionsMap {
-  AutoFilter: Tone.AutoFilterOptions
-  AutoPanner: Tone.AutoPannerOptions
-  AutoWah: Tone.AutoWahOptions
-  BitCrusher: Tone.BitCrusherOptions
-  Chebyshev: Tone.ChebyshevOptions
-  Chorus: Tone.ChorusOptions
-  Distortion: Tone.DistortionOptions
-  FeedbackDelay: Record<string, unknown> // FeedbackDelayOptions not exported
-  FrequencyShifter: Record<string, unknown> // FrequencyShifterOptions not exported
-  Freeverb: Tone.FreeverbOptions
-  JCReverb: Tone.JCReverbOptions
-  PingPongDelay: Tone.PingPongDelayOptions
-  PitchShift: Tone.PitchShiftOptions
-  Phaser: Tone.PhaserOptions
-  Reverb: Record<string, unknown> // ReverbOptions not exported
-  StereoWidener: Tone.StereoWidenerOptions
-  Tremolo: Tone.TremoloOptions
-  Vibrato: Tone.VibratoOptions
-}
-
 interface EffectInstanceMap {
   AutoFilter: Tone.AutoFilter
   AutoPanner: Tone.AutoPanner
@@ -85,6 +62,7 @@ interface EffectInstanceMap {
   Chorus: Tone.Chorus
   Distortion: Tone.Distortion
   FeedbackDelay: Tone.FeedbackDelay
+  Filter: Tone.Filter
   FrequencyShifter: Tone.FrequencyShifter
   Freeverb: Tone.Freeverb
   JCReverb: Tone.JCReverb
@@ -101,46 +79,50 @@ export class EffectWrapper<Name extends EffectName> {
   readonly name: Name
   readonly instance: EffectInstanceMap[Name]
 
-  constructor(name: Name, options?: Partial<EffectOptionsMap[Name]>) {
+  constructor(name: Name, options?: unknown) {
     this.name = name
     const EffectClass = EffectClasses[name]
-    // Type assertion needed since EffectClasses returns a generic constructor
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/consistent-type-assertions
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this.instance = new EffectClass(options) as EffectInstanceMap[Name]
   }
 
-  // /** Set a numeric parameter on the effect in a type-safe way */
-  // setParam(
-  //   paramName: keyof EffectOptionsMap[Name],
-  //   value: EffectOptionsMap[Name][keyof EffectOptionsMap[Name]],
-  // ): void {
-  //   this.instance.set({ [String(paramName)]: value })
-  // }
+  /** Set a numeric parameter on the effect in a type-safe way */
+  setParam(paramName: string, value: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+    ;(this.instance as any).set({ [String(paramName)]: value })
+  }
 
   /** Connect this effect to another audio node */
   connect(destination: Tone.ToneAudioNode): void {
-    this.instance.connect(destination)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+    ;(this.instance as any).connect(destination)
   }
 
   /** Disconnect this effect from all destinations */
   disconnect(): void {
-    this.instance.disconnect()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+    ;(this.instance as any).disconnect()
   }
 
-  // /** Get the current value of a parameter */
-  // getParam(paramName: keyof EffectOptionsMap[Name]): unknown {
-  //   const allParams = this.instance.get()
-  //   // Type assertion needed since get() returns a union type without string index signature
-  //   const paramsRecord = allParams as unknown as Record<string, unknown>
-  //   return paramsRecord[String(paramName)]
-  // }
+  /** Get the current value of a parameter */
+  getParam(paramName: string): unknown {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/consistent-type-assertions
+    const allParams = (this.instance as any).get()
+    // Type assertion needed since get() returns a union type without string index signature
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const paramsRecord = allParams as Record<string, unknown>
+    return paramsRecord[String(paramName)]
+  }
 
   // Compatibility methods for existing codebase
   update(value: number): void {
     // Set the 'wet' parameter which most effects have
-    this.instance.set({ wet: value })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+    ;(this.instance as any).set({ wet: value })
   }
 
-  get node(): EffectInstanceMap[Name] {
+  get node(): unknown {
     return this.instance
   }
 

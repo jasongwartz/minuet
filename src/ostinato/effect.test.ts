@@ -10,7 +10,7 @@ describe('EffectWrapper', () => {
     test('should create effect instances for all supported effects', () => {
       const effectNames: EffectName[] = [
         'AutoFilter', 'AutoPanner', 'AutoWah', 'BitCrusher', 'Chebyshev',
-        'Chorus', 'Distortion', 'FeedbackDelay', 'FrequencyShifter', 
+        'Chorus', 'Distortion', 'FeedbackDelay', 'Filter', 'FrequencyShifter', 
         'Freeverb', 'JCReverb', 'PingPongDelay', 'PitchShift', 'Phaser',
         'Reverb', 'StereoWidener', 'Tremolo', 'Vibrato'
       ]
@@ -83,6 +83,7 @@ describe('EffectWrapper', () => {
         depth: 0.7,
         wet: 1
       }
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       const getMock = vi.spyOn(chorus.instance, 'get').mockReturnValue(mockReturnValue as never)
 
       const frequency = chorus.getParam('frequency')

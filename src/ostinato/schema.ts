@@ -31,6 +31,7 @@ const zEffectName = z.enum([
   'Chorus',
   'Distortion',
   'FeedbackDelay',
+  'Filter',
   'FrequencyShifter',
   'Freeverb',
   'JCReverb',

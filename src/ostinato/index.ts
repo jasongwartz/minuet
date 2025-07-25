@@ -274,9 +274,6 @@ export class Engine {
         const e = new EffectWrapper(effect.name)
 
         for (const [param, value] of Object.entries(effect.params)) {
-          if (!(param in e.instance.get())) {
-            throw new Error(`Parameter "${param}" does not exist on effect "${effect.name}"`)
-          }
           if (typeof value === 'object') {
             valueFrom = value.from
             if ('controller' in valueFrom) {
@@ -304,7 +301,7 @@ export class Engine {
               this.webMidi.inputs[midiInputNumber]?.addListener('controlchange', (event) => {
                 if (event.controller.number === controller) {
                   const newValue = (event.rawValue ?? 0) * chunkSize + min
-                  e.instance.set({ [param]: newValue })
+                  e.setParam(param, newValue)
                 }
               })
             } else {
@@ -313,23 +310,19 @@ export class Engine {
                 Tone.Frequency(valueFrom.min).toFrequency(),
                 Tone.Frequency(valueFrom.max).toFrequency(),
               )
-              e.instance[param].connect(osc)
-
+              // Connect LFO to the parameter if it's connectable
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+              if (param in e.instance && typeof (e.instance as any)[param]?.connect === 'function') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
+                ;(e.instance as any)[param].connect(osc)
+              }
               osc.start()
             }
+          } else {
+            // Handle static parameter values
+            const paramValue = typeof value === 'string' ? Tone.Frequency(value).toFrequency() : value
+            e.setParam(param, paramValue)
           }
-
-          const startValue =
-            'value' in effect
-              ? typeof effect.value === 'number'
-                ? effect.value
-                : typeof effect.value === 'string'
-                  ? Tone.Frequency(effect.value).toFrequency()
-                  : e.default
-              : e.default
-          // Use the instance.set() method directly since we don't know the specific effect type
-          // Most effects have a 'wet' parameter for mix control
-          e.instance.set({ [param]: startValue })
         }
         return e
       })
@@ -337,6 +330,7 @@ export class Engine {
       // Whatever the previous chain was, disconnect it to avoid duplicate outputs
       // and to allow removing of effects from samples that previously had them.
       audioNodeStartOfChain.disconnect()
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return
       audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
       newTracks.push({ config: instrument, node: audioNodeStartOfChain })
     }

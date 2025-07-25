@@ -229,6 +229,7 @@ export const Chebyshev = MockEffect
 export const Chorus = MockEffect
 export const Distortion = MockEffect
 export const FeedbackDelay = MockEffect
+export const Filter = MockEffect
 export const FrequencyShifter = MockEffect
 export const Freeverb = MockEffect
 export const JCReverb = MockEffect
@@ -239,3 +240,7 @@ export const Reverb = MockEffect
 export const StereoWidener = MockEffect
 export const Tremolo = MockEffect
 export const Vibrato = MockEffect
+
+// Additional classes needed by EffectWrapper
+export const Frequency = vi.fn(() => ({ toFrequency: () => 440 }))
+export const LFO = MockEffect
