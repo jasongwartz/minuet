@@ -1,29 +1,27 @@
 import * as Tone from 'tone'
 
-// 1. Centralized Effect Registry
-export type EffectName =
-  | 'AutoFilter'
-  | 'AutoPanner'
-  | 'AutoWah'
-  | 'BitCrusher'
-  | 'Chebyshev'
-  | 'Chorus'
-  | 'Distortion'
-  | 'FeedbackDelay'
-  | 'FrequencyShifter'
-  | 'Freeverb'
-  | 'JCReverb'
-  | 'PingPongDelay'
-  | 'PitchShift'
-  | 'Phaser'
-  | 'Reverb'
-  | 'StereoWidener'
-  | 'Tremolo'
-  | 'Vibrato'
+// // 1. Centralized Effect Registry
+// export type EffectName =
+//   | 'AutoFilter'
+//   | 'AutoPanner'
+//   | 'AutoWah'
+//   | 'BitCrusher'
+//   | 'Chebyshev'
+//   | 'Chorus'
+//   | 'Distortion'
+//   | 'FeedbackDelay'
+//   | 'FrequencyShifter'
+//   | 'Freeverb'
+//   | 'JCReverb'
+//   | 'PingPongDelay'
+//   | 'PitchShift'
+//   | 'Phaser'
+//   | 'Reverb'
+//   | 'StereoWidener'
+//   | 'Tremolo'
+//   | 'Vibrato'
 
-type EffectConstructor<T = Tone.ToneAudioNode> = new (options?: Record<string, unknown>) => T
-
-const EffectClasses: Record<EffectName, EffectConstructor> = {
+const EffectClasses = {
   AutoFilter: Tone.AutoFilter,
   AutoPanner: Tone.AutoPanner,
   AutoWah: Tone.AutoWah,
@@ -32,6 +30,7 @@ const EffectClasses: Record<EffectName, EffectConstructor> = {
   Chorus: Tone.Chorus,
   Distortion: Tone.Distortion,
   FeedbackDelay: Tone.FeedbackDelay,
+  Filter: Tone.Filter,
   FrequencyShifter: Tone.FrequencyShifter,
   Freeverb: Tone.Freeverb,
   JCReverb: Tone.JCReverb,
@@ -42,7 +41,16 @@ const EffectClasses: Record<EffectName, EffectConstructor> = {
   StereoWidener: Tone.StereoWidener,
   Tremolo: Tone.Tremolo,
   Vibrato: Tone.Vibrato,
-}
+} as const
+
+export type EffectName = keyof typeof EffectClasses
+
+// const f = new Tone.Filter()
+// f.frequency.connect(new Tone.LFO())
+// const k = 'frequency'
+// if (k in f) {
+//   f[k].connect(new Tone.LFO())
+// }
 
 // 2. Generic Effect Wrapper Class
 // Mapping from effect name to that effect's options interface and class instance type
@@ -100,13 +108,13 @@ export class EffectWrapper<Name extends EffectName> {
     this.instance = new EffectClass(options) as EffectInstanceMap[Name]
   }
 
-  /** Set a numeric parameter on the effect in a type-safe way */
-  setParam(
-    paramName: keyof EffectOptionsMap[Name],
-    value: EffectOptionsMap[Name][keyof EffectOptionsMap[Name]],
-  ): void {
-    this.instance.set({ [String(paramName)]: value })
-  }
+  // /** Set a numeric parameter on the effect in a type-safe way */
+  // setParam(
+  //   paramName: keyof EffectOptionsMap[Name],
+  //   value: EffectOptionsMap[Name][keyof EffectOptionsMap[Name]],
+  // ): void {
+  //   this.instance.set({ [String(paramName)]: value })
+  // }
 
   /** Connect this effect to another audio node */
   connect(destination: Tone.ToneAudioNode): void {
@@ -118,13 +126,13 @@ export class EffectWrapper<Name extends EffectName> {
     this.instance.disconnect()
   }
 
-  /** Get the current value of a parameter */
-  getParam(paramName: keyof EffectOptionsMap[Name]): unknown {
-    const allParams = this.instance.get()
-    // Type assertion needed since get() returns a union type without string index signature
-    const paramsRecord = allParams as unknown as Record<string, unknown>
-    return paramsRecord[String(paramName)]
-  }
+  // /** Get the current value of a parameter */
+  // getParam(paramName: keyof EffectOptionsMap[Name]): unknown {
+  //   const allParams = this.instance.get()
+  //   // Type assertion needed since get() returns a union type without string index signature
+  //   const paramsRecord = allParams as unknown as Record<string, unknown>
+  //   return paramsRecord[String(paramName)]
+  // }
 
   // Compatibility methods for existing codebase
   update(value: number): void {
