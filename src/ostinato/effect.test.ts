@@ -1,6 +1,6 @@
-import { vi, describe, test, expect } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
-import { EffectWrapper, type EffectName } from './effect'
+import { type EffectName, EffectWrapper } from './effect'
 
 // Mock Tone.js
 vi.mock('tone')
@@ -20,10 +20,10 @@ describe('EffectWrapper', () => {
         expect(wrapper.name).toBe(effectName)
         expect(wrapper.instance).toBeDefined()
         // Instance should have required methods
-        expect(wrapper.instance.connect).toBeDefined()
-        expect(wrapper.instance.disconnect).toBeDefined()
-        expect(wrapper.instance.set).toBeDefined()
-        expect(wrapper.instance.get).toBeDefined()
+        expect(typeof wrapper.instance.connect).toBe('function')
+        expect(typeof wrapper.instance.disconnect).toBe('function')
+        expect(typeof wrapper.instance.set).toBe('function')
+        expect(typeof wrapper.instance.get).toBe('function')
       })
     })
 
@@ -78,11 +78,12 @@ describe('EffectWrapper', () => {
   describe('getParam method', () => {
     test('should retrieve parameter values from instance', () => {
       const chorus = new EffectWrapper('Chorus')
-      const getMock = vi.spyOn(chorus.instance, 'get').mockReturnValue({
+      const mockReturnValue = {
         frequency: 1.5,
         depth: 0.7,
         wet: 1
-      })
+      }
+      const getMock = vi.spyOn(chorus.instance, 'get').mockReturnValue(mockReturnValue as never)
 
       const frequency = chorus.getParam('frequency')
       expect(getMock).toHaveBeenCalled()

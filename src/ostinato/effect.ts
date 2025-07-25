@@ -1,15 +1,29 @@
 import * as Tone from 'tone'
 
 // 1. Centralized Effect Registry
-export type EffectName = 
-  | 'AutoFilter' | 'AutoPanner' | 'AutoWah' 
-  | 'BitCrusher' | 'Chebyshev' | 'Chorus' 
-  | 'Distortion' | 'FeedbackDelay' | 'FrequencyShifter' 
-  | 'Freeverb' | 'JCReverb' | 'PingPongDelay' 
-  | 'PitchShift' | 'Phaser' | 'Reverb' 
-  | 'StereoWidener' | 'Tremolo' | 'Vibrato'
+export type EffectName =
+  | 'AutoFilter'
+  | 'AutoPanner'
+  | 'AutoWah'
+  | 'BitCrusher'
+  | 'Chebyshev'
+  | 'Chorus'
+  | 'Distortion'
+  | 'FeedbackDelay'
+  | 'FrequencyShifter'
+  | 'Freeverb'
+  | 'JCReverb'
+  | 'PingPongDelay'
+  | 'PitchShift'
+  | 'Phaser'
+  | 'Reverb'
+  | 'StereoWidener'
+  | 'Tremolo'
+  | 'Vibrato'
 
-const EffectClasses: Record<EffectName, new (options?: any) => any> = {
+type EffectConstructor<T = Tone.ToneAudioNode> = new (options?: Record<string, unknown>) => T
+
+const EffectClasses: Record<EffectName, EffectConstructor> = {
   AutoFilter: Tone.AutoFilter,
   AutoPanner: Tone.AutoPanner,
   AutoWah: Tone.AutoWah,
@@ -27,7 +41,7 @@ const EffectClasses: Record<EffectName, new (options?: any) => any> = {
   Reverb: Tone.Reverb,
   StereoWidener: Tone.StereoWidener,
   Tremolo: Tone.Tremolo,
-  Vibrato: Tone.Vibrato
+  Vibrato: Tone.Vibrato,
 }
 
 // 2. Generic Effect Wrapper Class
@@ -81,18 +95,17 @@ export class EffectWrapper<Name extends EffectName> {
 
   constructor(name: Name, options?: Partial<EffectOptionsMap[Name]>) {
     this.name = name
-    const EffectClass = EffectClasses[name] as {
-      new(opts?: Partial<EffectOptionsMap[Name]>): EffectInstanceMap[Name]
-    }
-    this.instance = new EffectClass(options)
+    const EffectClass = EffectClasses[name]
+    // Type assertion needed since EffectClasses returns a generic constructor
+    this.instance = new EffectClass(options) as EffectInstanceMap[Name]
   }
 
   /** Set a numeric parameter on the effect in a type-safe way */
-  setParam<Key extends keyof EffectOptionsMap[Name]>(
-    paramName: Key, 
-    value: EffectOptionsMap[Name][Key]
+  setParam(
+    paramName: keyof EffectOptionsMap[Name],
+    value: EffectOptionsMap[Name][keyof EffectOptionsMap[Name]],
   ): void {
-    this.instance.set({ [paramName as string]: value })
+    this.instance.set({ [String(paramName)]: value })
   }
 
   /** Connect this effect to another audio node */
@@ -106,9 +119,24 @@ export class EffectWrapper<Name extends EffectName> {
   }
 
   /** Get the current value of a parameter */
-  getParam<Key extends keyof EffectOptionsMap[Name]>(
-    paramName: Key
-  ): EffectOptionsMap[Name][Key] {
-    return (this.instance.get() as any)[paramName as string] as EffectOptionsMap[Name][Key]
+  getParam(paramName: keyof EffectOptionsMap[Name]): unknown {
+    const allParams = this.instance.get()
+    // Type assertion needed since get() returns a union type without string index signature
+    const paramsRecord = allParams as unknown as Record<string, unknown>
+    return paramsRecord[String(paramName)]
   }
+
+  // Compatibility methods for existing codebase
+  update(value: number): void {
+    // Set the 'wet' parameter which most effects have
+    this.instance.set({ wet: value })
+  }
+
+  get node(): EffectInstanceMap[Name] {
+    return this.instance
+  }
+
+  readonly min: number = 0
+  readonly max: number = 1
+  readonly default: number = 0.5
 }
