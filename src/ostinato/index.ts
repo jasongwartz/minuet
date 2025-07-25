@@ -311,11 +311,7 @@ export class Engine {
                 Tone.Frequency(valueFrom.max).toFrequency(),
               )
               // Connect LFO to the parameter if it's connectable
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
-              if (param in e.instance && typeof (e.instance as any)[param]?.connect === 'function') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/consistent-type-assertions
-                ;(e.instance as any)[param].connect(osc)
-              }
+              e.connectToParam(param, osc)
               osc.start()
             }
           } else {
@@ -330,7 +326,6 @@ export class Engine {
       // Whatever the previous chain was, disconnect it to avoid duplicate outputs
       // and to allow removing of effects from samples that previously had them.
       audioNodeStartOfChain.disconnect()
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return
       audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
       newTracks.push({ config: instrument, node: audioNodeStartOfChain })
     }
