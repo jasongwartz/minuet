@@ -1,3 +1,4 @@
+// No need to import Tone types for this test file
 import { describe, expect, test, vi } from 'vitest'
 
 import { type EffectName, EffectWrapper } from './effect'

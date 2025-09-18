@@ -24,16 +24,21 @@ const EffectClasses = {
 
 export type EffectName = keyof typeof EffectClasses
 
-// Factory function to create effects with proper typing using function overloads
-function createEffect(name: EffectName, options?: Record<string, unknown>): unknown {
+// Factory function to create effects with proper typing using generics
+function createEffect<T extends EffectName>(
+  name: T,
+  options?: Record<string, unknown>,
+): InstanceType<(typeof EffectClasses)[T]> {
   const EffectClass = EffectClasses[name]
 
-  if (!options || Object.keys(options).length === 0) {
-    // Use Reflect.construct to avoid type assertion
-    return Reflect.construct(EffectClass, [])
-  }
+  // Use Reflect.construct to create instances dynamically
+  const instance: InstanceType<(typeof EffectClasses)[T]> =
+    options && Object.keys(options).length > 0
+      ? Reflect.construct(EffectClass, [options])
+      : Reflect.construct(EffectClass, [])
 
-  return Reflect.construct(EffectClass, [options])
+  // This type assertion is necessary for proper generic return typing with dynamic construction
+  return instance
 }
 
 // Type guards to safely interact with Tone.js effects
@@ -46,7 +51,7 @@ function hasSetMethod(obj: unknown): obj is { set: (params: Record<string, unkno
   )
 }
 
-function hasGetMethod(obj: unknown): obj is { get: () => Record<string, unknown> } {
+function hasGetMethod(obj: unknown): obj is { get: () => Record<string, unknown> | undefined } {
   return (
     typeof obj === 'object' &&
     obj !== null &&
@@ -77,7 +82,7 @@ function hasDisconnectMethod(obj: unknown): obj is { disconnect: () => void } {
 
 export class EffectWrapper<Name extends EffectName> {
   readonly name: Name
-  readonly instance: unknown
+  readonly instance?: InstanceType<(typeof EffectClasses)[Name]>
 
   constructor(name: Name, options?: Record<string, unknown>) {
     this.name = name
@@ -108,10 +113,10 @@ export class EffectWrapper<Name extends EffectName> {
   /** Get the current value of a parameter */
   getParam(paramName: string): unknown {
     if (hasGetMethod(this.instance)) {
-      const allParams = this.instance.get()
-      // Handle case where get() returns undefined (as in mocks)
-      if (allParams && typeof allParams === 'object' && paramName in allParams) {
-        return allParams[paramName as keyof typeof allParams]
+      const allParams = this.instance?.get()
+      // The type guard ensures allParams is Record<string, unknown>, but handle edge cases
+      if (allParams && paramName in allParams) {
+        return Reflect.get(allParams, paramName)
       }
     }
     return undefined
@@ -126,15 +131,20 @@ export class EffectWrapper<Name extends EffectName> {
    */
   connectToParam(paramName: string, source: Tone.ToneAudioNode): boolean {
     // Use the 'in' operator pattern from the commented example
-    if (typeof this.instance === 'object' && this.instance !== null && paramName in this.instance) {
-      const param = (this.instance as Record<string, unknown>)[paramName]
+    if (typeof this.instance === 'object' && paramName in this.instance) {
+      const param: unknown = Reflect.get(this.instance, paramName)
 
       // Check if the parameter has a connect method (like Tone.js Signal parameters)
-      if (param && typeof param === 'object' && param !== null && 'connect' in param) {
-        const connectMethod = (param as Record<string, unknown>).connect
+      if (typeof param === 'object' && param !== null && 'connect' in param) {
+        const connectMethod: unknown = Reflect.get(param, 'connect')
         if (typeof connectMethod === 'function') {
-          ;(connectMethod as (source: Tone.ToneAudioNode) => void)(source)
-          return true
+          // Call the connect method on the parameter with the source
+          try {
+            Reflect.apply(connectMethod, param, [source])
+            return true
+          } catch {
+            return false
+          }
         }
       }
     }
@@ -147,7 +157,7 @@ export class EffectWrapper<Name extends EffectName> {
     this.setParam('wet', value)
   }
 
-  get node(): unknown {
+  get node(): InstanceType<(typeof EffectClasses)[Name]> {
     return this.instance
   }
 
