@@ -1,8 +1,8 @@
-import type { LanguagePlugin } from './types'
+import { luaPlugin } from './lua'
 import { pklPlugin } from './pkl'
 import { pythonPlugin } from './python'
+import type { LanguagePlugin } from './types'
 import { typescriptPlugin } from './typescript'
-import { luaPlugin } from './lua'
 import { yamlPlugin } from './yaml'
 
 export type { LanguagePlugin } from './types'
