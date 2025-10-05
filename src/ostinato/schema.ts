@@ -1,5 +1,9 @@
 import { z } from 'zod/v4'
 
+const zTimeValue = z.string().or(z.number())
+
+const zNumberOrFrequency = z.number().or(z.string())
+
 const zEffectValueFrom = z.object({
   from: z
     .object({
@@ -20,7 +24,18 @@ const zEffectValueFrom = z.object({
 
 export type EffectValueFrom = z.infer<typeof zEffectValueFrom>
 
-const zEffectValueParam = z.number().or(z.string()).or(zEffectValueFrom)
+const zEffectValueRamp = z.object({
+  ramp: z.object({
+    start: zTimeValue.optional(),
+    end: zTimeValue,
+    from: zNumberOrFrequency,
+    to: zNumberOrFrequency,
+  }),
+})
+
+export type EffectValueRamp = z.infer<typeof zEffectValueRamp>
+
+const zEffectValueParam = z.number().or(z.string()).or(zEffectValueFrom).or(zEffectValueRamp)
 
 const zEffectNameBase = z.object({
   name: z.enum([

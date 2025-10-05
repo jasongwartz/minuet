@@ -3,7 +3,13 @@ import type { TransportClass } from 'tone/build/esm/core/clock/Transport'
 import { WebMidi as WM } from 'webmidi'
 
 import { EffectWrapper } from './effect'
-import type { EffectName, EffectValueFrom, Instrument, OstinatoSchema } from './schema'
+import type {
+  EffectName,
+  EffectValueFrom,
+  EffectValueRamp,
+  Instrument,
+  OstinatoSchema,
+} from './schema'
 
 export type { Instrument, OstinatoSchema }
 
@@ -269,59 +275,65 @@ export class Engine {
       }
 
       const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
-        let valueFrom: EffectValueFrom['from'] | null
-        let midiInputNumber: number | null
-
-        if ('value' in effect && typeof effect.value === 'object') {
-          valueFrom = effect.value.from
-          if ('controller' in valueFrom) {
-            if (this.webMidi.inputs.length === 1) {
-              midiInputNumber = 0
-            } else if ('input' in valueFrom && valueFrom.input !== undefined) {
-              midiInputNumber = valueFrom.input
-            } else {
-              throw new Error('from.input is required when more than 1 MIDI device is connected')
-            }
-          } else {
-            midiInputNumber = null
-          }
-        } else {
-          valueFrom = null
-          midiInputNumber = null
-        }
-        const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
-
         const e = new EffectWrapper(effect.name)
 
-        const startValue =
-          'value' in effect
-            ? typeof effect.value === 'number'
-              ? effect.value
-              : typeof effect.value === 'string'
-                ? Tone.Frequency(effect.value).toFrequency()
-                : e.default
-            : e.default
+        const toNumericValue = (value: number | string) =>
+          typeof value === 'number' ? value : Tone.Frequency(value).toFrequency()
+
+        const valueSpec = 'value' in effect ? effect.value : undefined
+        const isObjectValue = typeof valueSpec === 'object' && valueSpec !== null
+
+        let valueFrom: EffectValueFrom['from'] | null = null
+        let rampConfig: EffectValueRamp['ramp'] | null = null
+        let midiInputNumber: number | null = null
+
+        if (isObjectValue) {
+          if ('ramp' in valueSpec) {
+            rampConfig = valueSpec.ramp
+          } else if ('from' in valueSpec) {
+            valueFrom = valueSpec.from
+          }
+        }
+
+        if (valueFrom && 'controller' in valueFrom) {
+          if (this.webMidi.inputs.length === 1) {
+            midiInputNumber = 0
+          } else if ('input' in valueFrom && valueFrom.input !== undefined) {
+            midiInputNumber = valueFrom.input
+          } else {
+            throw new Error('from.input is required when more than 1 MIDI device is connected')
+          }
+        }
+
+        const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
+
+        const startValue = (() => {
+          if (typeof valueSpec === 'number') {
+            return valueSpec
+          }
+          if (typeof valueSpec === 'string') {
+            return toNumericValue(valueSpec)
+          }
+          if (rampConfig) {
+            return toNumericValue(rampConfig.from)
+          }
+          return e.default
+        })()
 
         e.update(startValue)
 
         if (valueFrom) {
           if ('controller' in valueFrom) {
-            const min = valueFrom.min
-              ? typeof valueFrom.min === 'string'
-                ? Tone.Frequency(valueFrom.min).toFrequency()
-                : valueFrom.min
-              : e.min
-            const max = valueFrom.max
-              ? typeof valueFrom.max === 'string'
-                ? Tone.Frequency(valueFrom.max).toFrequency()
-                : valueFrom.max
-              : e.max
+            const min = valueFrom.min !== undefined ? toNumericValue(valueFrom.min) : e.min
+            const max = valueFrom.max !== undefined ? toNumericValue(valueFrom.max) : e.max
 
             const chunkSize = (max - min) / 127
 
             midiInput?.addListener('controlchange', (event) => {
-              if (valueFrom.controller === event.controller.number) {
-                e.update((event.rawValue ?? 0) * chunkSize + min)
+              if (valueFrom && 'controller' in valueFrom) {
+                if (valueFrom.controller === event.controller.number) {
+                  e.update((event.rawValue ?? 0) * chunkSize + min)
+                }
               }
             })
           } else {
@@ -334,6 +346,33 @@ export class Engine {
             osc.start()
           }
         }
+
+        if (rampConfig && (effect.name === 'lpf' || effect.name === 'hpf')) {
+          const rampStartOffset = rampConfig.start ? Tone.Time(rampConfig.start).toSeconds() : 0
+          const rampEndOffset = Tone.Time(rampConfig.end).toSeconds()
+          const rampStartTime = globalClockPhraseStartTime + rampStartOffset
+          const rampEndTime = globalClockPhraseStartTime + rampEndOffset
+
+          if (rampEndTime < rampStartTime) {
+            console.warn(
+              `Ramp end precedes start for effect ${effect.name}. Ignoring ramp configuration.`,
+            )
+          } else {
+            const fromValue = toNumericValue(rampConfig.from)
+            const toValue = toNumericValue(rampConfig.to)
+
+            const rampParam = e.node.frequency
+            rampParam?.cancelScheduledValues?.(globalClockPhraseStartTime)
+            rampParam?.setValueAtTime?.(fromValue, rampStartTime)
+
+            if (rampEndTime === rampStartTime) {
+              rampParam?.setValueAtTime?.(toValue, rampEndTime)
+            } else {
+              rampParam?.linearRampToValueAtTime?.(toValue, rampEndTime)
+            }
+          }
+        }
+
         return e
       })
 

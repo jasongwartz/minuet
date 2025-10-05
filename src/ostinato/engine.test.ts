@@ -186,4 +186,54 @@ describe('Engine Scheduling', () => {
       expect(beatEvents[0]?.instrument).toBe('interval:4n')
     })
   })
+
+  describe('Effect automation', () => {
+    it('schedules ramp automation for filter frequency', async () => {
+      engine.config = {
+        bpm: 120,
+        instruments: [
+          {
+            sample: { name: 'test.wav' },
+            on: ['0'],
+            with: [
+              {
+                name: 'lpf',
+                value: {
+                  ramp: {
+                    start: '0:0:0',
+                    end: '0:2:0',
+                    from: 'C1',
+                    to: 'C8',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      }
+
+      await engine.start()
+
+      const paramEvents = getEventsByType('param')
+
+      expect(paramEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            method: 'cancelScheduledValues',
+            time: 0,
+          }),
+          expect.objectContaining({
+            method: 'setValueAtTime',
+            time: 0,
+            value: Tone.Frequency('C1').toFrequency(),
+          }),
+          expect.objectContaining({
+            method: 'linearRampToValueAtTime',
+            time: 1,
+            value: Tone.Frequency('C8').toFrequency(),
+          }),
+        ]),
+      )
+    })
+  })
 })

@@ -2,6 +2,52 @@ import { vi } from 'vitest'
 
 import { scheduledEvents } from '../test_utils'
 
+const pitchClassOffsets: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+}
+
+const toFrequency = (value: number | string): number => {
+  if (typeof value === 'number') {
+    return value
+  }
+
+  const numericValue = Number(value)
+  if (!Number.isNaN(numericValue)) {
+    return numericValue
+  }
+
+  const trimmed = value.trim()
+  const noteMatch = /^([A-Ga-g])([#b]?)(-?\d+)$/.exec(trimmed)
+  if (noteMatch) {
+    const note = noteMatch[1]?.toUpperCase()
+    const accidental = noteMatch[2]
+    const octave = parseInt(noteMatch[3] ?? '0', 10)
+
+    const baseOffset = pitchClassOffsets[note ?? '']
+    if (baseOffset === undefined) {
+      return 0
+    }
+
+    let semitoneOffset = baseOffset
+    if (accidental === '#') {
+      semitoneOffset += 1
+    } else if (accidental === 'b') {
+      semitoneOffset -= 1
+    }
+
+    const midiNumber = (octave + 1) * 12 + semitoneOffset
+    return 440 * 2 ** ((midiNumber - 69) / 12)
+  }
+
+  return 0
+}
+
 const mockTime = (timeString: string | number) => ({
   toSeconds: (): number => {
     const currentBPM = mockTransport.bpm.value
@@ -154,6 +200,46 @@ const mockSynth = {
   chain: vi.fn(),
 }
 
+class MockParam {
+  instrument: string
+  value: number
+  connect = vi.fn()
+  cancelScheduledValues = vi.fn((time: number): void => {
+    scheduledEvents.push({
+      type: 'param',
+      time,
+      method: 'cancelScheduledValues',
+      instrument: this.instrument,
+      value: this.value,
+    })
+  })
+  setValueAtTime = vi.fn((value: number, time: number): void => {
+    this.value = value
+    scheduledEvents.push({
+      type: 'param',
+      time,
+      method: 'setValueAtTime',
+      instrument: this.instrument,
+      value,
+    })
+  })
+  linearRampToValueAtTime = vi.fn((value: number, time: number): void => {
+    this.value = value
+    scheduledEvents.push({
+      type: 'param',
+      time,
+      method: 'linearRampToValueAtTime',
+      instrument: this.instrument,
+      value,
+    })
+  })
+
+  constructor(instrument: string, initialValue = 0) {
+    this.instrument = instrument
+    this.value = initialValue
+  }
+}
+
 export const start = vi.fn()
 const mockContext = {
   lookAhead: 0.5,
@@ -164,6 +250,9 @@ export const getTransport = () => mockTransport
 export const getDestination = (): object => ({})
 export const getDraw = () => mockGetDraw
 export const Time = mockTime
+export const Frequency = (value: number | string) => ({
+  toFrequency: (): number => toFrequency(value),
+})
 
 export class Loop {
   private callback: (time: number) => void
@@ -195,6 +284,51 @@ export class FMSynth {
   triggerAttackRelease = mockSynth.triggerAttackRelease
   disconnect = mockSynth.disconnect
   chain = mockSynth.chain
+}
+
+export class Filter {
+  type: string
+  frequency: MockParam
+  disconnect = vi.fn()
+  chain = vi.fn()
+  connect = vi.fn()
+
+  constructor(_frequency?: number, type = 'lowpass') {
+    this.type = type
+    this.frequency = new MockParam(`${type}.frequency`)
+  }
+}
+
+export class Distortion {
+  distortion = 0
+  disconnect = vi.fn()
+  chain = vi.fn()
+  connect = vi.fn()
+}
+
+export class Gain {
+  gain = new MockParam('gain')
+  disconnect = vi.fn()
+  chain = vi.fn()
+  connect = vi.fn()
+}
+
+export class Volume {
+  volume = new MockParam('volume')
+  disconnect = vi.fn()
+  chain = vi.fn()
+  connect = vi.fn()
+}
+
+export class LFO {
+  connect = vi.fn()
+  start = vi.fn()
+
+  constructor(
+    public period: string | number,
+    public min: number,
+    public max: number,
+  ) {}
 }
 
 export class UserMedia {

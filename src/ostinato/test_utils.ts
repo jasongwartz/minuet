@@ -1,11 +1,12 @@
 // Types for captured events
 export interface ScheduledEvent {
-  type: 'sample' | 'synth' | 'midi' | 'beat'
+  type: 'sample' | 'synth' | 'midi' | 'beat' | 'param'
   time: number
   note?: string
   duration?: number | string
   instrument?: string
   method: string
+  value?: number
 }
 
 // Mock event collectors
