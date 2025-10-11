@@ -30,6 +30,7 @@ const zEffectNameBase = z.object({
     'gain',
     'distortion',
     'volume',
+    'pitchshift',
   ]),
 })
 
