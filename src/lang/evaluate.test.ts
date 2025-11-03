@@ -7,33 +7,66 @@ import { ZodError } from 'zod/v4'
 import { Engine } from '../ostinato'
 import { execFromEditor, PLUGINS } from './evaluate'
 
-vi.mock('tone', () => ({
-  start: vi.fn(),
-  getContext: () => ({ lookAhead: 0 }),
-  getTransport: () => ({
-    bpm: { value: 120 },
-    start: vi.fn(),
-  }),
-  Loop: class MockLoop {
-    start() {
-      /* pass */
-    }
-  },
-  UserMedia: class MockUserMedia {
-    open() {
-      return Promise.resolve()
-    }
-  },
-  Player: class MockPlayer {
-    name: string
-    autostart: boolean
+vi.mock('tone', () => {
+  const mockEffect = class MockEffect {
+    connect = vi.fn()
+    disconnect = vi.fn()
+    set = vi.fn()
+    get = vi.fn(() => ({}))
+  }
 
-    constructor() {
-      this.name = 'test.wav'
-      this.autostart = false
-    }
-  },
-}))
+  return {
+    start: vi.fn(),
+    getContext: () => ({ lookAhead: 0 }),
+    getTransport: () => ({
+      bpm: { value: 120 },
+      start: vi.fn(),
+    }),
+    Loop: class MockLoop {
+      start() {
+        /* pass */
+      }
+    },
+    UserMedia: class MockUserMedia {
+      open() {
+        return Promise.resolve()
+      }
+    },
+    Player: class MockPlayer {
+      name: string
+      autostart: boolean
+
+      constructor() {
+        this.name = 'test.wav'
+        this.autostart = false
+      }
+    },
+    // Effect classes
+    AutoFilter: mockEffect,
+    AutoPanner: mockEffect,
+    AutoWah: mockEffect,
+    BitCrusher: mockEffect,
+    Chebyshev: mockEffect,
+    Chorus: mockEffect,
+    Distortion: mockEffect,
+    FeedbackDelay: mockEffect,
+    Filter: mockEffect,
+    FrequencyShifter: mockEffect,
+    Freeverb: mockEffect,
+    JCReverb: mockEffect,
+    PingPongDelay: mockEffect,
+    PitchShift: mockEffect,
+    Phaser: mockEffect,
+    Reverb: mockEffect,
+    StereoWidener: mockEffect,
+    Tremolo: mockEffect,
+    Vibrato: mockEffect,
+    // Other classes
+    Frequency: vi.fn(() => ({ toFrequency: () => 440 })),
+    LFO: mockEffect,
+    getDestination: vi.fn(),
+  }
+})
 
 vi.mock('webmidi', () => ({
   WebMidi: {

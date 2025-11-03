@@ -22,25 +22,32 @@ export type EffectValueFrom = z.infer<typeof zEffectValueFrom>
 
 const zEffectValueParam = z.number().or(z.string()).or(zEffectValueFrom)
 
-const zEffectNameBase = z.object({
-  name: z.enum([
-    // 'flanger',
-    'lpf',
-    'hpf',
-    'gain',
-    'distortion',
-    'volume',
-  ]),
-})
-
-const zEffect = z.union([
-  zEffectNameBase.extend({
-    value: zEffectValueParam,
-  }),
-  zEffectNameBase.extend({
-    params: zEffectValueParam.or(z.array(z.object({ name: z.string(), value: zEffectValueParam }))),
-  }),
+const zEffectName = z.enum([
+  'AutoFilter',
+  'AutoPanner',
+  'AutoWah',
+  'BitCrusher',
+  'Chebyshev',
+  'Chorus',
+  'Distortion',
+  'FeedbackDelay',
+  'Filter',
+  'FrequencyShifter',
+  'Freeverb',
+  'JCReverb',
+  'PingPongDelay',
+  'PitchShift',
+  'Phaser',
+  'Reverb',
+  'StereoWidener',
+  'Tremolo',
+  'Vibrato',
 ])
+
+const zEffect = z.object({
+  name: zEffectName,
+  params: z.record(z.string(), zEffectValueParam),
+})
 
 export type EffectName = z.infer<typeof zEffect>['name']
 export type Effect = z.infer<typeof zEffect>

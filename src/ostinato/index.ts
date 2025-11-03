@@ -271,67 +271,54 @@ export class Engine {
       const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
         let valueFrom: EffectValueFrom['from'] | null
         let midiInputNumber: number | null
-
-        if ('value' in effect && typeof effect.value === 'object') {
-          valueFrom = effect.value.from
-          if ('controller' in valueFrom) {
-            if (this.webMidi.inputs.length === 1) {
-              midiInputNumber = 0
-            } else if ('input' in valueFrom && valueFrom.input !== undefined) {
-              midiInputNumber = valueFrom.input
-            } else {
-              throw new Error('from.input is required when more than 1 MIDI device is connected')
-            }
-          } else {
-            midiInputNumber = null
-          }
-        } else {
-          valueFrom = null
-          midiInputNumber = null
-        }
-        const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
-
         const e = new EffectWrapper(effect.name)
 
-        const startValue =
-          'value' in effect
-            ? typeof effect.value === 'number'
-              ? effect.value
-              : typeof effect.value === 'string'
-                ? Tone.Frequency(effect.value).toFrequency()
-                : e.default
-            : e.default
-
-        e.update(startValue)
-
-        if (valueFrom) {
-          if ('controller' in valueFrom) {
-            const min = valueFrom.min
-              ? typeof valueFrom.min === 'string'
-                ? Tone.Frequency(valueFrom.min).toFrequency()
-                : valueFrom.min
-              : e.min
-            const max = valueFrom.max
-              ? typeof valueFrom.max === 'string'
-                ? Tone.Frequency(valueFrom.max).toFrequency()
-                : valueFrom.max
-              : e.max
-
-            const chunkSize = (max - min) / 127
-
-            midiInput?.addListener('controlchange', (event) => {
-              if (valueFrom.controller === event.controller.number) {
-                e.update((event.rawValue ?? 0) * chunkSize + min)
+        for (const [param, value] of Object.entries(effect.params)) {
+          if (typeof value === 'object') {
+            valueFrom = value.from
+            if ('controller' in valueFrom) {
+              const { controller } = valueFrom
+              if (this.webMidi.inputs.length === 1) {
+                midiInputNumber = 0
+              } else if ('input' in valueFrom && valueFrom.input !== undefined) {
+                midiInputNumber = valueFrom.input
+              } else {
+                throw new Error('from.input is required when more than 1 MIDI device is connected')
               }
-            })
+              const min = valueFrom.min
+                ? typeof valueFrom.min === 'string'
+                  ? Tone.Frequency(valueFrom.min).toFrequency()
+                  : valueFrom.min
+                : e.min
+              const max = valueFrom.max
+                ? typeof valueFrom.max === 'string'
+                  ? Tone.Frequency(valueFrom.max).toFrequency()
+                  : valueFrom.max
+                : e.max
+
+              const chunkSize = (max - min) / 127
+
+              this.webMidi.inputs[midiInputNumber]?.addListener('controlchange', (event) => {
+                if (event.controller.number === controller) {
+                  const newValue = (event.rawValue ?? 0) * chunkSize + min
+                  e.setParam(param, newValue)
+                }
+              })
+            } else {
+              const osc = new Tone.LFO(
+                valueFrom.period,
+                Tone.Frequency(valueFrom.min).toFrequency(),
+                Tone.Frequency(valueFrom.max).toFrequency(),
+              )
+              // Connect LFO to the parameter if it's connectable
+              e.connectToParam(param, osc)
+              osc.start()
+            }
           } else {
-            const osc = new Tone.LFO(
-              valueFrom.period,
-              Tone.Frequency(valueFrom.min).toFrequency(),
-              Tone.Frequency(valueFrom.max).toFrequency(),
-            )
-            e.connect(osc)
-            osc.start()
+            // Handle static parameter values
+            const paramValue =
+              typeof value === 'string' ? Tone.Frequency(value).toFrequency() : value
+            e.setParam(param, paramValue)
           }
         }
         return e
@@ -340,7 +327,10 @@ export class Engine {
       // Whatever the previous chain was, disconnect it to avoid duplicate outputs
       // and to allow removing of effects from samples that previously had them.
       audioNodeStartOfChain.disconnect()
-      audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
+      audioNodeStartOfChain.chain(
+        ...effects.map((e) => e.node as Tone.ToneAudioNode),
+        Tone.getDestination(),
+      )
       newTracks.push({ config: instrument, node: audioNodeStartOfChain })
     }
 
