@@ -1,4 +1,5 @@
 import { ChevronDown, Music } from 'lucide-react'
+import { useState } from 'react'
 import type * as Tone from 'tone'
 
 import { PLUGINS } from '@/src/lang/evaluate'
@@ -7,6 +8,7 @@ import type { SampleDetails } from '../load_samples'
 import type { EditorLanguage } from './Editor'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
 import { useToast } from './shadcn-ui/hooks/use-toast'
+import { Input } from './shadcn-ui/input'
 import {
   Select,
   SelectContent,
@@ -38,6 +40,19 @@ export function SamplesSidebar({
   onLanguageChange: (value: EditorLanguage) => void
 }) {
   const { toast } = useToast()
+  const [filterValue, setFilterValue] = useState('')
+
+  const normalizedFilter = filterValue.trim().toLowerCase()
+  const filteredSamples =
+    normalizedFilter.length > 0
+      ? samples.filter(({ name }) => name.toLowerCase().includes(normalizedFilter))
+      : samples
+
+  const sampleCountLabel =
+    normalizedFilter.length > 0
+      ? `${filteredSamples.length}/${samples.length}`
+      : `${samples.length}`
+
   return (
     <Sidebar variant='floating'>
       <SidebarHeader>
@@ -93,44 +108,68 @@ export function SamplesSidebar({
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger>
-                Samples ({samples.length})
+                Samples ({sampleCountLabel})
                 <ChevronDown className='ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180' />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <CollapsibleContent>
+                <div className='p-2 pb-3'>
+                  <Input
+                    value={filterValue}
+                    onChange={(event) => {
+                      setFilterValue(event.target.value)
+                    }}
+                    placeholder='Filter samples'
+                    type='search'
+                    spellCheck={false}
+                    aria-label='Filter samples'
+                  />
+                </div>
                 <SidebarMenu>
-                  {samples.map(({ name, player }, index) => (
-                    <SidebarMenuItem key={index}>
-                      {player ? (
-                        <SidebarMenuButton
-                          onClick={() =>
-                            player.state === 'stopped'
-                              ? player.toDestination().start(0)
-                              : player.stop()
-                          }
-                          onContextMenu={(e) => {
-                            e.preventDefault()
-                            navigator.clipboard
-                              .writeText(name)
-                              .then(() =>
-                                toast({ description: `Sample name "${name}" copied to clipboard` }),
-                              )
-                              .catch(() =>
-                                toast({
-                                  description: 'Unable to copy sample name to clipboard',
-                                  variant: 'destructive',
-                                }),
-                              )
-                          }}
-                        >
-                          {name}
-                        </SidebarMenuButton>
-                      ) : (
-                        <SidebarMenuSkeleton />
-                      )}
+                  {filteredSamples.length > 0 ? (
+                    filteredSamples.map(({ name, player }) => (
+                      <SidebarMenuItem key={name}>
+                        {player ? (
+                          <SidebarMenuButton
+                            onClick={() => {
+                              if (player.state === 'stopped') {
+                                player.toDestination().start(0)
+                              } else {
+                                player.stop()
+                              }
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault()
+                              navigator.clipboard
+                                .writeText(name)
+                                .then(() =>
+                                  toast({
+                                    description: `Sample name "${name}" copied to clipboard`,
+                                  }),
+                                )
+                                .catch(() =>
+                                  toast({
+                                    description: 'Unable to copy sample name to clipboard',
+                                    variant: 'destructive',
+                                  }),
+                                )
+                            }}
+                          >
+                            {name}
+                          </SidebarMenuButton>
+                        ) : (
+                          <SidebarMenuSkeleton />
+                        )}
+                      </SidebarMenuItem>
+                    ))
+                  ) : (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton disabled className='justify-start'>
+                        No matching samples
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                  )}
                 </SidebarMenu>
               </CollapsibleContent>
             </SidebarGroupContent>
