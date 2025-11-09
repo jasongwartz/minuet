@@ -265,8 +265,10 @@ export class Engine {
         }
         if (instrument.sample.pitchShift) {
           const interval =
-            Tone.Frequency(instrument.sample.pitchShift.to).toMidi() -
-            Tone.Frequency(instrument.sample.pitchShift.from).toMidi()
+            typeof instrument.sample.pitchShift === 'number'
+              ? instrument.sample.pitchShift
+              : Tone.Frequency(instrument.sample.pitchShift.to).toMidi() -
+                Tone.Frequency(instrument.sample.pitchShift.from).toMidi()
           const pitchshift = new EffectWrapper('pitchshift')
           pitchshift.update(interval)
           effects.push(pitchshift)
