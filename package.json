@@ -40,7 +40,7 @@
     "wasmoon": "^1.16.0",
     "webmidi": "^3.1.11",
     "yaml": "^2.8.0",
-    "zod": "^3.25.28"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@pkl-community/pkl-typescript": "^0.0.16",
