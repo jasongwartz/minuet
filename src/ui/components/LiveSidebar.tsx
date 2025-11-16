@@ -29,7 +29,7 @@ export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: ty
             <SidebarVolumeCard title='Master' node={getDestination()} />
             {tracks
               .filter((t): t is Track & { node: ToneAudioNode } => t.node !== undefined)
-              .map(({ config, node }) => {
+              .map(({ config, node }, index) => {
                 const name =
                   config.id ??
                   ('synth' in config
@@ -39,13 +39,11 @@ export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: ty
                     : 'external' in config
                       ? 'external'
                       : config.sample.name)
-                // Use the `phrase` value to force rerendering when config and name stays the same,
-                // but the Tone node changes.
-                // TODO: Remove this when Tone.Player instances are held across phrases as long
-                // as config doesn't change.
+                // Keep keys stable so the volume meters can reuse their Tone.Meter instances while still
+                // reacting to the `node` prop changing between phrases.
                 return (
                   <SidebarVolumeCard
-                    key={name + `-${currentPhrase ?? 0}`}
+                    key={`${config.id ?? name}-${index}`}
                     title={name}
                     node={node}
                   />

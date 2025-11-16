@@ -24,30 +24,38 @@ export const SidebarCardVolumeMeter = memo(({ node }: { node: ToneAudioNode }) =
   // and
   // https://github.com/CollinsSpencer/react-web-audio
   const [volume, setVolume] = useState(0)
-  const meter = useRef(new Tone.Meter())
-
+  const meter = useRef<Tone.Meter | null>(null)
   const requestRef = useRef<number>()
+  const throttleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const animate = useCallback(() => {
-    const value = meter.current.getValue()
+    const value = meter.current?.getValue() ?? 0
     setVolume(Array.isArray(value) ? (value[0] ?? 0) : value)
     const fps = 30
-    setTimeout(() => {
+    throttleTimeout.current = setTimeout(() => {
       requestRef.current = requestAnimationFrame(animate)
     }, 1000 / fps)
-  }, [meter])
+  }, [])
 
   useEffect(() => {
-    meter.current = new Tone.Meter()
-    node.connect(meter.current)
+    const meterNode = new Tone.Meter()
+    meter.current = meterNode
+    node.connect(meterNode)
     requestRef.current = requestAnimationFrame(animate)
+
     return () => {
-      if (requestRef.current) {
+      if (requestRef.current !== undefined) {
         cancelAnimationFrame(requestRef.current)
+        requestRef.current = undefined
       }
+      if (throttleTimeout.current) {
+        clearTimeout(throttleTimeout.current)
+        throttleTimeout.current = null
+      }
+      node.disconnect(meterNode)
+      meterNode.dispose()
     }
   }, [node, animate])
 
-  // TODO: this seems to be what's causing an "Aw, snap" after about 20-25 phrases!
   return <Progress value={volume < -100 ? 0 : 100 + volume} />
 })
