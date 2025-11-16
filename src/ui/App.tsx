@@ -19,6 +19,7 @@ import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
 import defaultPython from './default_python.py?raw'
 import defaultTs from './default_ts.ts?raw'
+import defaultYaml from './default_yaml.yaml?raw'
 import { getSamples, type SampleDetails } from './load_samples'
 import { loadSample } from './load_samples'
 import {
@@ -145,6 +146,7 @@ const App = () => {
     typescript: defaultTs,
     python: defaultPython,
     pkl: defaultPkl,
+    yaml: defaultYaml,
   }
 
   return (
