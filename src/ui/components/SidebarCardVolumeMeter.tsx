@@ -57,13 +57,13 @@ export const SidebarCardVolumeMeter = memo(
           cancelAnimationFrame(requestRef.current)
           requestRef.current = undefined
         }
-      if (throttleTimeout.current) {
-        clearTimeout(throttleTimeout.current)
-        throttleTimeout.current = null
+        if (throttleTimeout.current) {
+          clearTimeout(throttleTimeout.current)
+          throttleTimeout.current = null
+        }
+        meterNode.dispose()
       }
-      meterNode.dispose()
-    }
-  }, [node, phraseVersion, animate])
+    }, [node, phraseVersion, animate])
 
     return <Progress value={volume < -100 ? 0 : 100 + volume} />
   },
