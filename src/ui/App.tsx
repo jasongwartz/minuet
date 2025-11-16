@@ -27,6 +27,7 @@ import {
   evaluatingStatusIndicatorAtom,
   schedulingStatusIndicatorAtom,
 } from './state'
+import { ZodError, z } from 'zod/v4'
 
 const App = () => {
   const [engineState, setEngine] = useState<Engine | null>(null)
@@ -130,7 +131,12 @@ const App = () => {
           console.error(err)
           toast({
             title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
-            description: err instanceof Error ? err.message : 'Unknown error',
+            description:
+              err instanceof ZodError
+                ? z.prettifyError(err)
+                : err instanceof Error
+                  ? err.message
+                  : 'Unknown error',
             variant: 'destructive',
           })
         })
