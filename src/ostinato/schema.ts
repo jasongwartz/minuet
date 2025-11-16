@@ -84,7 +84,7 @@ const zSynth = zInstrumentBase.extend({
 })
 
 const zSample = zInstrumentBase.extend({
-  on: z.array(z.string().or(z.number())),
+  on: z.array(z.string().or(z.number())).or(z.literal('loop')),
   sample: z.object({
     name: z.string(),
     stretchTo: z.string().optional(),

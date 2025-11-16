@@ -256,6 +256,23 @@ export class Engine {
             `Sample name "${instrument.sample.name}" unknown! Sample names available: ${Object.keys(this.samples).join(', ')}`,
           )
         }
+
+        // If sample track already exists, and was set to infinite loop, reuse the
+        // existing track instead of recreating it
+        const found = this.tracks.find(
+          ({ config }) =>
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+            (config.id && instrument.id && config.id === instrument.id) ||
+            ('sample' in config &&
+              config.sample.name === instrument.sample.name &&
+              config.on === 'loop' &&
+              instrument.on === 'loop'),
+        )
+        if (found) {
+          newTracks.push(found)
+          continue
+        }
+
         audioNodeStartOfChain = sample
 
         if (instrument.sample.stretchTo) {
@@ -263,8 +280,13 @@ export class Engine {
             sample.buffer.duration / sample.toSeconds(instrument.sample.stretchTo)
         }
 
-        for (const note of instrument.on.sort(timeOrderSort)) {
-          sample.start(globalClockPhraseStartTime + Tone.Time(note).toSeconds())
+        if (typeof instrument.on === 'string') {
+          sample.loop = true
+          sample.start(globalClockPhraseStartTime)
+        } else {
+          for (const note of instrument.on.sort(timeOrderSort)) {
+            sample.start(globalClockPhraseStartTime + Tone.Time(note).toSeconds())
+          }
         }
       }
 
