@@ -26,7 +26,11 @@ export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: ty
         <SidebarGroup>
           <SidebarGroupLabel>Tracks ({tracks.length})</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarVolumeCard title='Master' node={getDestination()} />
+            <SidebarVolumeCard
+              title='Master'
+              node={getDestination()}
+              phraseVersion={currentPhrase ?? 0}
+            />
             {tracks
               .filter((t): t is Track & { node: ToneAudioNode } => t.node !== undefined)
               .map(({ config, node }, index) => {
@@ -46,6 +50,7 @@ export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: ty
                     key={`${config.id ?? name}-${index}`}
                     title={name}
                     node={node}
+                    phraseVersion={currentPhrase ?? 0}
                   />
                 )
               })}
