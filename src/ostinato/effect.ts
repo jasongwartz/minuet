@@ -8,6 +8,7 @@ interface EffectNameToNodeType {
   lpf: Tone.Filter
   gain: Tone.Gain
   volume: Tone.Volume
+  pitchshift: Tone.PitchShift
 }
 
 interface NodeWithProperties<T> {
@@ -62,6 +63,14 @@ const getNodeCreators = (): NodeCreator => ({
     create: () => new Tone.Volume(),
     update: (node, value) => (node.volume.value = value),
     connect: (source, node) => source.connect(node.volume),
+  },
+  pitchshift: {
+    default: 0,
+    min: Tone.Frequency('C0').toMidi(), // 0
+    max: Tone.Frequency('B11').toMidi(), // 127
+    create: () => new Tone.PitchShift(),
+    update: (node, value) => (node.pitch = value),
+    connect: (source, node) => source.connect(node),
   },
 })
 

@@ -30,6 +30,7 @@ const zEffectNameBase = z.object({
     'gain',
     'distortion',
     'volume',
+    'pitchshift',
   ]),
 })
 
@@ -93,6 +94,7 @@ const zSample = zInstrumentBase.extend({
         from: z.string(),
         to: z.string(),
       })
+      .or(z.int())
       .optional(),
   }),
 })

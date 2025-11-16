@@ -101,6 +101,7 @@ export class Engine {
     for (const instrument of this.config?.instruments ?? []) {
       let audioNodeStartOfChain: Tone.ToneAudioNode
 
+      const effects: EffectWrapper<EffectName>[] = []
       if ('synth' in instrument) {
         let schedulePlay: (
           note: string,
@@ -279,6 +280,16 @@ export class Engine {
           sample.playbackRate =
             sample.buffer.duration / sample.toSeconds(instrument.sample.stretchTo)
         }
+        if (instrument.sample.pitchShift) {
+          const interval =
+            typeof instrument.sample.pitchShift === 'number'
+              ? instrument.sample.pitchShift
+              : Tone.Frequency(instrument.sample.pitchShift.to).toMidi() -
+                Tone.Frequency(instrument.sample.pitchShift.from).toMidi()
+          const pitchshift = new EffectWrapper('pitchshift')
+          pitchshift.update(interval)
+          effects.push(pitchshift)
+        }
 
         if (typeof instrument.on === 'string') {
           sample.loop = true
@@ -290,74 +301,76 @@ export class Engine {
         }
       }
 
-      const effects = instrument.with.map((effect): EffectWrapper<EffectName> => {
-        let valueFrom: EffectValueFrom['from'] | null
-        let midiInputNumber: number | null
+      effects.push(
+        ...instrument.with.map((effect): EffectWrapper<EffectName> => {
+          let valueFrom: EffectValueFrom['from'] | null
+          let midiInputNumber: number | null
 
-        if ('value' in effect && typeof effect.value === 'object') {
-          valueFrom = effect.value.from
-          if ('controller' in valueFrom) {
-            if (this.webMidi.inputs.length === 1) {
-              midiInputNumber = 0
-            } else if ('input' in valueFrom && valueFrom.input !== undefined) {
-              midiInputNumber = valueFrom.input
+          if ('value' in effect && typeof effect.value === 'object') {
+            valueFrom = effect.value.from
+            if ('controller' in valueFrom) {
+              if (this.webMidi.inputs.length === 1) {
+                midiInputNumber = 0
+              } else if ('input' in valueFrom && valueFrom.input !== undefined) {
+                midiInputNumber = valueFrom.input
+              } else {
+                throw new Error('from.input is required when more than 1 MIDI device is connected')
+              }
             } else {
-              throw new Error('from.input is required when more than 1 MIDI device is connected')
+              midiInputNumber = null
             }
           } else {
+            valueFrom = null
             midiInputNumber = null
           }
-        } else {
-          valueFrom = null
-          midiInputNumber = null
-        }
-        const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
+          const midiInput = midiInputNumber !== null ? this.webMidi.inputs[midiInputNumber] : null
 
-        const e = new EffectWrapper(effect.name)
+          const e = new EffectWrapper(effect.name)
 
-        const startValue =
-          'value' in effect
-            ? typeof effect.value === 'number'
-              ? effect.value
-              : typeof effect.value === 'string'
-                ? Tone.Frequency(effect.value).toFrequency()
-                : e.default
-            : e.default
+          const startValue =
+            'value' in effect
+              ? typeof effect.value === 'number'
+                ? effect.value
+                : typeof effect.value === 'string'
+                  ? Tone.Frequency(effect.value).toFrequency()
+                  : e.default
+              : e.default
 
-        e.update(startValue)
+          e.update(startValue)
 
-        if (valueFrom) {
-          if ('controller' in valueFrom) {
-            const min = valueFrom.min
-              ? typeof valueFrom.min === 'string'
-                ? Tone.Frequency(valueFrom.min).toFrequency()
-                : valueFrom.min
-              : e.min
-            const max = valueFrom.max
-              ? typeof valueFrom.max === 'string'
-                ? Tone.Frequency(valueFrom.max).toFrequency()
-                : valueFrom.max
-              : e.max
+          if (valueFrom) {
+            if ('controller' in valueFrom) {
+              const min = valueFrom.min
+                ? typeof valueFrom.min === 'string'
+                  ? Tone.Frequency(valueFrom.min).toFrequency()
+                  : valueFrom.min
+                : e.min
+              const max = valueFrom.max
+                ? typeof valueFrom.max === 'string'
+                  ? Tone.Frequency(valueFrom.max).toFrequency()
+                  : valueFrom.max
+                : e.max
 
-            const chunkSize = (max - min) / 127
+              const chunkSize = (max - min) / 127
 
-            midiInput?.addListener('controlchange', (event) => {
-              if (valueFrom.controller === event.controller.number) {
-                e.update((event.rawValue ?? 0) * chunkSize + min)
-              }
-            })
-          } else {
-            const osc = new Tone.LFO(
-              valueFrom.period,
-              Tone.Frequency(valueFrom.min).toFrequency(),
-              Tone.Frequency(valueFrom.max).toFrequency(),
-            )
-            e.connect(osc)
-            osc.start()
+              midiInput?.addListener('controlchange', (event) => {
+                if (valueFrom.controller === event.controller.number) {
+                  e.update((event.rawValue ?? 0) * chunkSize + min)
+                }
+              })
+            } else {
+              const osc = new Tone.LFO(
+                valueFrom.period,
+                Tone.Frequency(valueFrom.min).toFrequency(),
+                Tone.Frequency(valueFrom.max).toFrequency(),
+              )
+              e.connect(osc)
+              osc.start()
+            }
           }
-        }
-        return e
-      })
+          return e
+        }),
+      )
 
       // Whatever the previous chain was, disconnect it to avoid duplicate outputs
       // and to allow removing of effects from samples that previously had them.
