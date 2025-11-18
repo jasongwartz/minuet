@@ -75,7 +75,6 @@ export class EffectWrapper<T extends EffectName> {
     this.nodeMetadata = getNodeCreators()[this.name]
     this.node = this.nodeMetadata.create()
   }
-
   get min() {
     return this.nodeMetadata.min
   }

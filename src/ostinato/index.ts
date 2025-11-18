@@ -1,5 +1,6 @@
 import * as Tone from 'tone'
 import type { TransportClass } from 'tone/build/esm/core/clock/Transport'
+import type { ControlChangeMessageEvent } from 'webmidi'
 import { WebMidi as WM } from 'webmidi'
 
 import { EffectWrapper } from './effect'
@@ -40,6 +41,7 @@ export class Engine {
   phrase = 0
   userMedia: Tone.UserMedia
   userMediaStreams: { default: Tone.UserMedia } & Record<string, Tone.UserMedia>
+  beatTrackingEventId?: number
 
   get started() {
     return this.transport.state === 'started'
@@ -61,6 +63,11 @@ export class Engine {
       globalClockPhraseStartTime,
     )
 
+    // Clear previously scheduled beat tracking event to prevent memory leak
+    if (this.beatTrackingEventId !== undefined) {
+      this.transport.clear(this.beatTrackingEventId)
+    }
+
     const start = Date.now()
     this.phrase += 1
     this.events?.onSchedulingStart?.()
@@ -69,7 +76,7 @@ export class Engine {
     const elapsedTime = `${Math.floor(transportClockPhraseStartTime / 60)}m${Math.floor(transportClockPhraseStartTime % 60)}s`
     console.log(`Scheduling phrase number: ${this.phrase}, elapsed time: ${elapsedTime}`)
 
-    this.transport.scheduleRepeat(
+    this.beatTrackingEventId = this.transport.scheduleRepeat(
       (repeatTime) => {
         // Calculate how many seconds, and therefore how many beats,
         // will have passed from the phrase start time
@@ -319,11 +326,13 @@ export class Engine {
 
             const chunkSize = (max - min) / 127
 
-            midiInput?.addListener('controlchange', (event) => {
+            const controlChangeListener = (event: ControlChangeMessageEvent) => {
               if (valueFrom.controller === event.controller.number) {
                 e.update((event.rawValue ?? 0) * chunkSize + min)
               }
-            })
+            }
+
+            midiInput?.addListener('controlchange', controlChangeListener)
           } else {
             const osc = new Tone.LFO(
               valueFrom.period,
@@ -341,7 +350,21 @@ export class Engine {
       // and to allow removing of effects from samples that previously had them.
       audioNodeStartOfChain.disconnect()
       audioNodeStartOfChain.chain(...effects.map((e) => e.node), Tone.getDestination())
-      newTracks.push({ config: instrument, node: audioNodeStartOfChain })
+      newTracks.push({ config: instrument, node: audioNodeStartOfChain, effects })
+    }
+
+    // Dispose of old tracks to prevent memory leak from accumulated audio nodes
+    // Don't dispose samples (reused) or user media streams (persistent)
+    for (const oldTrack of this.tracks) {
+      // Dispose synths and other audio nodes (but not samples or user media)
+      if (
+        !('sample' in oldTrack.config || 'external' in oldTrack.config) &&
+        oldTrack.node &&
+        'dispose' in oldTrack.node &&
+        typeof oldTrack.node.dispose === 'function'
+      ) {
+        oldTrack.node.dispose()
+      }
     }
 
     this.tracks = newTracks
