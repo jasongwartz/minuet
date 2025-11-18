@@ -4,6 +4,7 @@ import type { OnMount } from '@monaco-editor/react'
 import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
+import { z, ZodError } from 'zod/v4'
 
 import { execFromEditor } from '../lang/evaluate'
 import { PLUGINS } from '../lang/plugins'
@@ -132,7 +133,12 @@ const App = () => {
           console.error(err)
           toast({
             title: `Error evaluating code${err instanceof Error ? `: ${err.name}` : ''}`,
-            description: err instanceof Error ? err.message : 'Unknown error',
+            description:
+              err instanceof ZodError
+                ? z.prettifyError(err)
+                : err instanceof Error
+                  ? err.message
+                  : 'Unknown error',
             variant: 'destructive',
           })
         })
