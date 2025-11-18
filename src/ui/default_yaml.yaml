@@ -1,0 +1,33 @@
+bpm: 70
+instruments:
+  - sample:
+      name: Cymatics - Lofi Kick 5 - D#.wav
+    on: ['0:0:0', '1:0:0', '2:0:0', '3:0:0']
+
+  - sample:
+      name: bbc_weather---_07038337.mp3
+      with: []
+    on: loop
+
+  - sample:
+      name: Cymatics - Lofi Hihat Loop 15 - 85 BPM.wav
+      stretchTo: '4:0:0'
+    on: [0]
+  - sample:
+      name: ellington trane in a sentimental mood intro.mp3
+      stretchTo: '2:0:0'
+    on: [0, '2:0:0']
+  - synth: FMSynth
+    on:
+      - notes: ['B2']
+        beat: 0
+        duration: '2:0:0'
+        mode: once
+      - notes: ['G1']
+        beat: '2:0:0'
+        duration: '1:2:0'
+        mode: once
+      - notes: ['E1']
+        beat: '3:2:0'
+        duration: '0:2:0'
+        mode: once

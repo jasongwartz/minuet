@@ -21,7 +21,7 @@ export const pythonPlugin: LanguagePlugin = {
     }
     await pyodide.loadPackagesFromImports(contents)
     const output: unknown = await pyodide.runPythonAsync(contents)
-    console.log(typeof output)
+
     if (typeof output !== 'string') {
       throw new Error('Python output must be a string! (eg. using `json.dumps()`)')
     }
