@@ -5,7 +5,8 @@ import { YAMLParseError } from 'yaml'
 import { ZodError } from 'zod/v4'
 
 import { Engine } from '../ostinato'
-import { execFromEditor, PLUGINS } from './evaluate'
+import { execFromEditor } from './evaluate'
+import { PLUGINS } from './plugins'
 
 vi.mock('tone', () => ({
   start: vi.fn(),
