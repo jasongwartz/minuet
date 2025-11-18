@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 import { z, ZodError } from 'zod/v4'
 
-import { execFromEditor, PLUGINS } from '../lang/evaluate'
-import { Engine, type Track } from '../ostinato'
+import { execFromEditor } from '../lang/evaluate'
+import { PLUGINS } from '../lang/plugins'
+import type { Track } from '../ostinato'
+import { Engine } from '../ostinato'
 import type { EditorLanguage } from './components/Editor'
 import Editor from './components/Editor'
 import Header from './components/Header'
@@ -19,7 +21,9 @@ import { Toaster } from './components/shadcn-ui/toaster'
 import defaultPkl from './default_pkl.txt?raw'
 import defaultPython from './default_python.py?raw'
 import defaultTs from './default_ts.ts?raw'
-import { getSamples, loadSample, type SampleDetails } from './load_samples'
+import defaultYaml from './default_yaml.yaml?raw'
+import { getSamples, type SampleDetails } from './load_samples'
+import { loadSample } from './load_samples'
 import {
   currentBeatAtom,
   editorLanguageAtom,
@@ -149,6 +153,7 @@ const App = () => {
     typescript: defaultTs,
     python: defaultPython,
     pkl: defaultPkl,
+    yaml: defaultYaml,
   }
 
   return (

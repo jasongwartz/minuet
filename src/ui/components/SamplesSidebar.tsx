@@ -1,7 +1,7 @@
 import { ChevronDown, Music } from 'lucide-react'
 import type * as Tone from 'tone'
 
-import { PLUGINS } from '@/src/lang/evaluate'
+import { PLUGINS } from '@/src/lang/plugins'
 
 import type { SampleDetails } from '../load_samples'
 import type { EditorLanguage } from './Editor'

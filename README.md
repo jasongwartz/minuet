@@ -57,21 +57,32 @@ npm run dev
 
 #### Adding New Language Support
 
-Create a new language plugin in `src/lang/evaluate.ts` like so:
+Create a new language plugin by adding a file in `src/lang/plugins/`:
 
 ```typescript
+// src/lang/plugins/newlang.ts
+import type { LanguagePlugin } from './types'
+
+export const newlangPlugin: LanguagePlugin = {
+  name: 'New Language',
+  render: async (contents: string) => {
+    // Implementation goes here.
+    // The "contents" argument will be the string of everything
+    // in the developer pane in the editor. The render() function
+    // should execute/evaluate the code and return a JavaScript object,
+    // which will be validated against the schema.
+  },
+}
+```
+
+Finally, export the plugin from `src/lang/plugins/index.ts`:
+
+```typescript
+import { newlangPlugin } from './newlang'
+
 export const PLUGINS = {
   // existing plugins...
-  newlang: {
-    name: 'New Language',
-    render: async (contents: string) => {
-      // Implementation goes here.
-      // The "contents" argument will be the string of everything
-      // in the developer pane in the editor. The render() function
-      // should execute/evaluate the code and return a JavaScript object,
-      // which will be validated against the schema.
-    },
-  },
+  newlang: newlangPlugin,
 }
 ```
 
