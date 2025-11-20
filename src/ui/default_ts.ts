@@ -26,17 +26,30 @@ const hhOff16s = Array(16)
       synth: 'AMSynth',
       on: [
         {
-          notes: ['C3', 'Eb3', 'F3', 'Bb3'],
+          notes: ['C4', 'D4', 'Eb4', 'F4', 'G4', 'Bb4'],
           beat: 0,
-          duration: '32n',
-          every: '32n',
+          duration: '16n',
+          every: '16n',
           mode: 'loop',
           octaveVariance: 1,
         },
       ],
+      with: [
+        {
+          name: 'hpf',
+          value: {
+            from: {
+              oscillator: 'lfo',
+              min: 'C3',
+              max: 'C7',
+              period: '3:0:0',
+            },
+          },
+        },
+      ],
     },
     {
-      synth: 'AMSynth',
+      synth: 'FMSynth',
       on: [
         { notes: ['C1'], beat: 0, duration: '0:3:0', mode: 'once' },
         { notes: ['G1'], beat: '0:3:0', duration: '4n', mode: 'once' },
