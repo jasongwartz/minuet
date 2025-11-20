@@ -1,9 +1,11 @@
+import { useAtom } from 'jotai'
 import { ChevronDown, Music } from 'lucide-react'
 import type * as Tone from 'tone'
 
 import { PLUGINS } from '@/src/lang/plugins'
 
 import type { SampleDetails } from '../load_samples'
+import { editorLanguageAtom } from '../state'
 import type { EditorLanguage } from './Editor'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
 import { useToast } from './shadcn-ui/hooks/use-toast'
@@ -29,8 +31,6 @@ import {
   SidebarMenuSkeleton,
   SidebarSeparator,
 } from './shadcn-ui/sidebar'
-import { editorLanguageAtom } from '../state'
-import { useAtom } from 'jotai'
 
 export function SamplesSidebar({
   samples,
