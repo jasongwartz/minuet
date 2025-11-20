@@ -1,6 +1,7 @@
 import './App.css'
 
 import type { OnMount } from '@monaco-editor/react'
+import { Analytics } from '@vercel/analytics/react'
 import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
@@ -188,6 +189,7 @@ const App = () => {
         <LiveSidebar tracks={trackNodes} webmidi={engineRef.current?.webMidi} />
       </SidebarProvider>
       <Toaster />
+      <Analytics />
     </>
   )
 }
