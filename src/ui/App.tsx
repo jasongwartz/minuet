@@ -42,6 +42,7 @@ const App = () => {
   const setSchedulingStatusIndicator = useSetAtom(schedulingStatusIndicatorAtom)
   const [editorLanguage, setEditorLanguage] = useAtom(editorLanguageAtom)
   const editorLanguageRef = useRef(editorLanguage)
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
 
   useEffect(() => {
     getSamples()
@@ -104,6 +105,7 @@ const App = () => {
   })
 
   const onEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor
     monaco.editor.setTheme('vs-light')
 
     const evaluateEditorCallback = () => {
@@ -163,6 +165,16 @@ const App = () => {
         <SamplesSidebar
           samples={samples}
           onLanguageChange={(lang) => {
+            // Check if current content matches the default for the current language
+            const currentContent = editorRef.current?.getValue() ?? ''
+            const currentDefault = defaultContentsByLanguage[editorLanguage] ?? ''
+
+            // If content is still default, switch to new language's default
+            if (currentContent === currentDefault) {
+              const newDefault = defaultContentsByLanguage[lang] ?? ''
+              editorRef.current?.setValue(newDefault)
+            }
+
             setEditorLanguage(lang)
             if (PLUGINS[lang].register) {
               toast({
