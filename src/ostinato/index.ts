@@ -402,9 +402,16 @@ export class Engine {
 
   async start() {
     await Tone.start()
+
     // Only try to enable WebMidi if the browser supports it
     if (this.webMidi.supported) {
-      this.webMidi = await this.webMidi.enable()
+      try {
+        this.webMidi = await this.webMidi.enable()
+      } catch (error) {
+        // Firefox will report .supported true, but will deny the request
+        // if no devices are plugged in.
+        console.warn('Could not enable Web MIDI API (access denied or no devices detected):', error)
+      }
     } else {
       console.warn('Web MIDI API is not supported in this browser')
     }
