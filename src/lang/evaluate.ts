@@ -10,8 +10,11 @@ export const execFromEditor = async (
   contents: string,
   editorLanguage: EditorLanguage,
 ) => {
-  const plugin = PLUGINS[editorLanguage]
-  console.log(`Rendering input using "${plugin.name}" plugin`)
+  const pluginLoader = PLUGINS[editorLanguage]
+  console.log(`Loading "${pluginLoader.name}" plugin...`)
+
+  const plugin = await pluginLoader.load()
+  console.log(`Rendering input using "${pluginLoader.name}" plugin`)
 
   if (plugin.register) {
     await plugin.register()

@@ -1,17 +1,27 @@
-import { luaPlugin } from './lua'
-import { pklPlugin } from './pkl'
-import { pythonPlugin } from './python'
 import type { LanguagePlugin } from './types'
-import { typescriptPlugin } from './typescript'
-import { yamlPlugin } from './yaml'
 
 export type { LanguagePlugin } from './types'
-export { pklPlugin, pythonPlugin, typescriptPlugin, luaPlugin, yamlPlugin }
 
+// Lazy-load plugins to reduce initial bundle size
 export const PLUGINS = {
-  pkl: pklPlugin,
-  typescript: typescriptPlugin,
-  python: pythonPlugin,
-  lua: luaPlugin,
-  yaml: yamlPlugin,
-} satisfies Record<string, LanguagePlugin>
+  pkl: {
+    name: 'Pkl',
+    load: () => import('./pkl').then((m) => m.pklPlugin),
+  },
+  typescript: {
+    name: 'TypeScript',
+    load: () => import('./typescript').then((m) => m.typescriptPlugin),
+  },
+  python: {
+    name: 'Python',
+    load: () => import('./python').then((m) => m.pythonPlugin),
+  },
+  lua: {
+    name: 'Lua',
+    load: () => import('./lua').then((m) => m.luaPlugin),
+  },
+  yaml: {
+    name: 'YAML',
+    load: () => import('./yaml').then((m) => m.yamlPlugin),
+  },
+} satisfies Record<string, { name: string; load: () => Promise<LanguagePlugin> }>
