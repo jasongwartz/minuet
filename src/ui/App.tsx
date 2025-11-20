@@ -3,6 +3,11 @@ import './App.css'
 import type { OnMount } from '@monaco-editor/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useAtom, useSetAtom } from 'jotai'
+import * as prettier from 'prettier'
+// Prettier plugins have empty .d.ts files, causing import/namespace warnings
+// eslint-disable-next-line import/namespace
+import * as prettierPluginEstree from 'prettier/plugins/estree'
+import * as prettierPluginTypescript from 'prettier/plugins/typescript'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 import { z, ZodError } from 'zod/v4'
@@ -107,6 +112,73 @@ const App = () => {
   const onEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
     monaco.editor.setTheme('vs-light')
+
+    // Register Prettier-based formatter for TypeScript
+    // This will override Monaco's built-in TypeScript formatter
+    monaco.languages.registerDocumentFormattingEditProvider('typescript', {
+      async provideDocumentFormattingEdits(model) {
+        const text = model.getValue()
+
+        try {
+          const formatted = await prettier.format(text, {
+            parser: 'typescript',
+            plugins: [prettierPluginTypescript, prettierPluginEstree],
+            semi: false,
+            singleQuote: true,
+            tabWidth: 2,
+            trailingComma: 'all',
+            useTabs: false,
+            printWidth: 100,
+            arrowParens: 'always',
+            bracketSpacing: true,
+            jsxSingleQuote: true,
+          })
+
+          return [
+            {
+              range: model.getFullModelRange(),
+              text: formatted,
+            },
+          ]
+        } catch (error) {
+          console.error('Prettier formatting failed:', error)
+          return []
+        }
+      },
+    })
+
+    // Register Prettier-based formatter for JavaScript
+    monaco.languages.registerDocumentFormattingEditProvider('javascript', {
+      async provideDocumentFormattingEdits(model) {
+        const text = model.getValue()
+
+        try {
+          const formatted = await prettier.format(text, {
+            parser: 'babel',
+            plugins: [prettierPluginTypescript, prettierPluginEstree],
+            semi: false,
+            singleQuote: true,
+            tabWidth: 2,
+            trailingComma: 'all',
+            useTabs: false,
+            printWidth: 100,
+            arrowParens: 'always',
+            bracketSpacing: true,
+            jsxSingleQuote: true,
+          })
+
+          return [
+            {
+              range: model.getFullModelRange(),
+              text: formatted,
+            },
+          ]
+        } catch (error) {
+          console.error('Prettier formatting failed:', error)
+          return []
+        }
+      },
+    })
 
     const evaluateEditorCallback = () => {
       if (!engineRef.current) {
