@@ -10,5 +10,11 @@
       "destination": "https://docs.google.com/presentation/d/1EK8R9gP49O0vhx1s05poGofnS-_TNruSQanPGdy1h9Y/edit?usp=sharing",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/samples/list",
+      "destination": "/api/samples/list"
+    }
   ]
 }
