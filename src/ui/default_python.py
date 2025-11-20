@@ -1,59 +1,103 @@
 import json
 
-data = {
-    "bpm": 70,
-    "instruments": [
+
+bd = {
+    "sample": {"name": "kick.mp3"},
+    "on": [
+        f"{start + bar}:{beat}:{sub}"
+        for start in [0, 2]
+        for (bar, beat, sub) in [
+            (0, 0, 0),
+            (0, 1, 2),
+            (0, 3, 0),
+            (1, 1, 0),
+            (1, 2, 2),
+        ]
+    ],
+}
+
+sd = {
+    "sample": {"name": "snare.mp3"},
+    "on": [
+        f.format(i)
+        for i in range(0, 4)
+        for f in [
+            "{}:1:0",
+            "{}:3:0",
+        ]
+    ],
+}
+
+hh = {
+    "sample": {
+        "name": "hihat_loop.mp3",
+        "stretchTo": "2:0:0",
+    },
+    "on": ["0:0:0", "2:0:0"],
+}
+
+lead_synth = {
+    "synth": "AMSynth",
+    "on": [
         {
-            "sample": {
-                "name": "7_Drum_01_85bpm.wav",
-                "stretchTo": "4:0:0"
-            },
-            "on": [0],
-            "with": []
-        },
-        {
-            "sample": {
-                "name": "Cymatics - Lofi Kick 5 - D#.wav"
-            },
-            "on": [0, "1:0:0", "2:0:0", "3:0:0"],
-            "with": []
-        },
-        {
-            "sample": {
-                "name": "Cymatics - Lofi Snare 6 - F#.wav"
-            },
-            "on": ["0:1:0", "0:3:0", "1:1:0", "1:3:0", "2:1:0", "2:3:0", "3:1:0", "3:3:0"],
-            "with": []
-        },
-        {
-            "synth": "FMSynth",
-            "on": [
-                {"notes": ["C1"], "beat": 0, "duration": "0:3:0", "mode": "once"},
-                {"notes": ["G1"], "beat": "0:3:0", "duration": "4n", "mode": "once"},
-                {"notes": ["F1"], "beat": "1:0:0", "duration": "1:0:0", "mode": "once"},
-                {"notes": ["Bb1"], "beat": "1:3:0", "duration": "8n", "mode": "once"},
-                {"notes": ["B1", "C2"], "beat": "1:3:2", "duration": "16n", "mode": "once"},
-                {"notes": ["C1"], "beat": "2:0:0", "duration": "0:3:0", "mode": "once"},
-                {"notes": ["G1"], "beat": "2:3:0", "duration": "4n", "mode": "once"},
-                {"notes": ["F1"], "beat": "3:0:0", "duration": "1:0:0", "mode": "once"},
-                {"notes": ["Bb1"], "beat": "3:3:0", "duration": "8n", "mode": "once"},
-                {"notes": ["B1", "C2"], "beat": "3:3:2", "duration": "16n", "mode": "once"}
-            ],
-            "with": [
-                {
-                    "name": "lpf",
-                    "value": {
-                        "from": {
-                            "oscillator": "lfo",
-                            "min": "C2",
-                            "max": "C5",
-                            "period": "0:0:3"
-                        }
-                    }
-                }
-            ]
+            "notes": ["A4", "B4", "C5", "D5", "E5", "G5"],
+            "mode": "loop",
+            "beat": 0,
+            "duration": "16n",
+            "every": "16n",
+            "order": "random",
+            "octaveVariance": 2,
         }
-    ]
+    ],
+    "with": [
+        {
+            "name": "hpf",
+            "value": {
+                "from": {
+                    "oscillator": "lfo",
+                    "period": "3:0:0",
+                    "min": "C4",
+                    "max": "C7",
+                }
+            },
+        }
+    ],
+}
+
+bass_synth = {
+    "synth": "AMSynth",
+    "on": [
+        {
+            "notes": ["A1"],
+            "beat": 0,
+            "duration": "2:0:0",
+            "mode": "once",
+        },
+        {
+            "notes": ["F1"],
+            "beat": "2:0:0",
+            "duration": "1:2:0",
+            "mode": "once",
+        },
+        {
+            "notes": ["D1"],
+            "beat": "3:2:0",
+            "duration": "0:2:0",
+            "mode": "once",
+        },
+    ],
+}
+
+
+data = {
+    "bpm": 105,
+    "instruments": [
+        bd,
+        sd,
+        hh,
+        lead_synth,
+        bass_synth,
+    ],
 }
 
 json.dumps(data)

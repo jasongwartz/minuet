@@ -28,4 +28,4 @@ export const schedulingStatusIndicatorAtom = atom<{
   text: '...',
 })
 
-export const editorLanguageAtom = atom<EditorLanguage>('typescript')
+export const editorLanguageAtom = atom<EditorLanguage>('python')

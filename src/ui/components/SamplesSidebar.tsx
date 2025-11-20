@@ -29,6 +29,8 @@ import {
   SidebarMenuSkeleton,
   SidebarSeparator,
 } from './shadcn-ui/sidebar'
+import { editorLanguageAtom } from '../state'
+import { useAtom } from 'jotai'
 
 export function SamplesSidebar({
   samples,
@@ -38,6 +40,8 @@ export function SamplesSidebar({
   onLanguageChange: (value: EditorLanguage) => void
 }) {
   const { toast } = useToast()
+  const [editorLanguage] = useAtom(editorLanguageAtom)
+
   return (
     <Sidebar variant='floating'>
       <SidebarHeader>
@@ -68,7 +72,7 @@ export function SamplesSidebar({
           <SidebarGroupContent>
             <SidebarMenuItem>
               <Select
-                defaultValue='typescript' // TODO: use the default from the atom instead
+                value={editorLanguage}
                 onValueChange={(value: EditorLanguage) => {
                   onLanguageChange(value)
                 }}

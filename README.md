@@ -102,6 +102,8 @@ npx vercel blob put \
   --content-type audio/mpeg
 ```
 
+If you need to test or debug the production configuration locally, you can run `npx vercel dev`. This will run the Vercel CLI's dev server and use the function defined in `/api/samples/list.tsx`, which will refer to the samples stored in Vercel Blob.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue to get feedback on your idea before making a PR.
