@@ -2,6 +2,8 @@
 
 Minuet is a programming environment for live-coding music in programming languages in the browser. Minuet has support for samples, software synths, effects, MIDI controller input, and playing external MIDI devices like analog synthesizers.
 
+![Minuet Screenshot](screenshot.png)
+
 ## Usage
 
 You can start making music with code at: https://minuet.gwartz.me
