@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/wac-2025/abstract",
+      "destination": "https://github.com/jasongwartz/minuet/blob/main/docs/jasongwartz-wac25.pdf",
+      "permanent": true
+    },
+    {
+      "source": "/wac-2025/slides",
+      "destination": "https://docs.google.com/presentation/d/1EK8R9gP49O0vhx1s05poGofnS-_TNruSQanPGdy1h9Y/edit?usp=sharing",
+      "permanent": true
+    }
+  ]
+}
