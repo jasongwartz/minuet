@@ -1,11 +1,12 @@
 import './App.css'
 
 import type { OnMount } from '@monaco-editor/react'
+import { Analytics } from '@vercel/analytics/next'
 import { useAtom, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 import { z, ZodError } from 'zod/v4'
-import { Analytics } from '@vercel/analytics/next'
+
 import { execFromEditor } from '../lang/evaluate'
 import { PLUGINS } from '../lang/plugins'
 import type { Track } from '../ostinato'
