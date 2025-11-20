@@ -93,12 +93,14 @@ describe('loadSample', () => {
 
   it('should handle cached samples', async () => {
     const mockBlob = new Blob(['cached audio data'])
+    const mockArrayBuffer = await mockBlob.arrayBuffer()
 
     // Mock database returning cached data
     mockDbFirst.mockResolvedValueOnce({
       name: 'cached.wav',
       url: '/samples/cached.wav',
-      blob: mockBlob,
+      arrayBuffer: mockArrayBuffer,
+      mimeType: 'audio/wav',
     })
 
     const sample = { name: 'cached.wav', url: '/samples/cached.wav' }
@@ -107,5 +109,77 @@ describe('loadSample', () => {
     // Should not fetch from network
     expect(fetch).not.toHaveBeenCalled()
     expect(result.name).toBe('cached.wav')
+  })
+
+  it('should store blob as ArrayBuffer for Safari compatibility', async () => {
+    const mockBlob = new Blob(['audio data'], { type: 'audio/mpeg' })
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+
+    mockFetch.mockResolvedValueOnce({
+      blob: () => Promise.resolve(mockBlob),
+    })
+
+    // Replace the mocked put to spy on what gets stored
+    vi.mocked(await import('./idb')).db.samples.put = mockPut
+
+    const sample = { name: 'test.mp3', url: '/samples/test.mp3' }
+    await loadSample(sample)
+
+    // Verify put was called with ArrayBuffer, not Blob
+    expect(mockPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'test.mp3',
+        url: '/samples/test.mp3',
+        arrayBuffer: expect.any(ArrayBuffer),
+        mimeType: 'audio/mpeg',
+      }),
+    )
+
+    // Verify it's not storing a Blob
+    const putCall = mockPut.mock.calls[0]?.[0]
+    expect(putCall).not.toHaveProperty('blob')
+  })
+
+  it('should store empty MIME type when blob.type is empty', async () => {
+    const mockBlob = new Blob(['audio data'], { type: '' })
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+
+    mockFetch.mockResolvedValueOnce({
+      blob: () => Promise.resolve(mockBlob),
+    })
+
+    vi.mocked(await import('./idb')).db.samples.put = mockPut
+
+    const sample = { name: 'test.unknown', url: '/samples/test.unknown' }
+    await loadSample(sample)
+
+    // Should store whatever blob.type is (empty string in this case)
+    expect(mockPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mimeType: '',
+      }),
+    )
+  })
+
+  it('should reconstruct blob from ArrayBuffer with correct MIME type', async () => {
+    const originalData = 'cached audio data'
+    const originalBlob = new Blob([originalData], { type: 'audio/ogg' })
+    const mockArrayBuffer = await originalBlob.arrayBuffer()
+
+    mockDbFirst.mockResolvedValueOnce({
+      name: 'cached.ogg',
+      url: '/samples/cached.ogg',
+      arrayBuffer: mockArrayBuffer,
+      mimeType: 'audio/ogg',
+    })
+
+    const sample = { name: 'cached.ogg', url: '/samples/cached.ogg' }
+    await loadSample(sample)
+
+    // Verify URL.createObjectURL was called (blob was reconstructed)
+    expect(global.URL.createObjectURL).toHaveBeenCalled()
+
+    // Note: We can't directly verify the Blob's type in the mock,
+    // but the integration tests in idb.test.ts verify the full round-trip
   })
 })

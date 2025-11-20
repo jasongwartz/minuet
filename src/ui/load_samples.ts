@@ -33,15 +33,17 @@ export const loadSample = async (sample: SampleDetails) => {
   const cached = await db.samples.where('url').equals(sample.url).first()
   let blob: Blob
   if (cached) {
-    blob = cached.blob
+    blob = new Blob([cached.arrayBuffer], { type: cached.mimeType })
   } else {
     // CAF files will be transparently converted by server middleware
     const response = await fetch(sample.url)
     blob = await response.blob()
+    const arrayBuffer = await blob.arrayBuffer()
     await db.samples.put({
       name: sample.name,
       url: sample.url,
-      blob,
+      arrayBuffer,
+      mimeType: blob.type,
     })
   }
   const blobUrl = URL.createObjectURL(blob)
