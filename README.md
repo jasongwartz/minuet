@@ -90,15 +90,17 @@ export const PLUGINS = {
 
 ### Sample Management
 
-Audio samples are located in `public/samples/`. The development server includes a custom Vite plugin that:
+In development, the Vite dev server will automatically pick up any samples located in `public/samples/`. To add your own samples, place them in the `public/samples/` directory and refresh the page.
 
-- Serves samples from the public directory
-- Handles audio file caching
+The production deployment (as well as Vercel branch previews) use samples stored on [Vercel Blob storage](https://vercel.com/storage/blob). If you have admin permission on the Vercel project, you can run a command like this to upload a sample (note the `samples/` prefix):
 
-To add new samples:
-
-1. Place audio files in `public/samples/`
-1. Samples will appear in the sidebar after reloading the page
+```bash
+BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..." \
+npx vercel blob put \
+  ./public/samples/sample_name.mp3 \
+  --pathname samples/sample_name.mp3 \
+  --content-type audio/mpeg
+```
 
 ## Contributing
 
