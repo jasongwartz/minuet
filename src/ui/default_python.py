@@ -1,5 +1,25 @@
 import json
 
+# Welcome to 'Minuet', a multi-language live coding platform for the web.
+# You are now coding music in Python in the browser!
+#
+# Press Ctrl-Enter to start playback. Then modify the code as you like,
+# and then press Ctrl-Enter again to update the phrase-plan.
+#
+# Refresh the page or close the tab if you want to exit.
+#
+# Minuet will maintain a 4-bar loop. You can describe durations and
+# note placement according to the Tone.js Time definitions:
+# https://tonejs.github.io/docs/15.1.22/types/Unit.Time.html
+# For example, use "0:0:0" for the downbeat of the first bar,
+# and "1:2:0" for the *third* beat of the *second* bar - don't
+# forget about zero-indexing! The "bars:beats:sixteenths" syntax
+# can be used to describe both placements and durations.
+# You can also describe durations using syntax like
+# "8n" for an eighth note, "4n" for a quarter note, etc.
+#
+# You can find the source code or file an issue on GitHub:
+# https://github.com/jasongwartz/minuet
 
 bd = {
     "sample": {"name": "kick.mp3"},
