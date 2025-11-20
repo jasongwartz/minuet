@@ -166,13 +166,18 @@ const App = () => {
           samples={samples}
           onLanguageChange={(lang) => {
             // Check if current content matches the default for the current language
-            const currentContent = editorRef.current?.getValue() ?? ''
-            const currentDefault = defaultContentsByLanguage[editorLanguage] ?? ''
+            const currentContent = editorRef.current?.getValue()
+            const currentDefault = defaultContentsByLanguage[editorLanguage]
+            const defaultContentsForNewLanguage = defaultContentsByLanguage[lang]
 
             // If content is still default, switch to new language's default
-            if (currentContent === currentDefault) {
-              const newDefault = defaultContentsByLanguage[lang] ?? ''
-              editorRef.current?.setValue(newDefault)
+            if (
+              defaultContentsForNewLanguage &&
+              currentContent &&
+              currentDefault &&
+              currentContent === currentDefault
+            ) {
+              editorRef.current?.setValue(defaultContentsForNewLanguage)
             }
 
             setEditorLanguage(lang)
