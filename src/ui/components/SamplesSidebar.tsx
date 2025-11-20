@@ -1,9 +1,11 @@
+import { useAtom } from 'jotai'
 import { ChevronDown, Music } from 'lucide-react'
 import type * as Tone from 'tone'
 
 import { PLUGINS } from '@/src/lang/plugins'
 
 import type { SampleDetails } from '../load_samples'
+import { editorLanguageAtom } from '../state'
 import type { EditorLanguage } from './Editor'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn-ui/collapsible'
 import { useToast } from './shadcn-ui/hooks/use-toast'
@@ -38,6 +40,8 @@ export function SamplesSidebar({
   onLanguageChange: (value: EditorLanguage) => void
 }) {
   const { toast } = useToast()
+  const [editorLanguage] = useAtom(editorLanguageAtom)
+
   return (
     <Sidebar variant='floating'>
       <SidebarHeader>
@@ -68,7 +72,7 @@ export function SamplesSidebar({
           <SidebarGroupContent>
             <SidebarMenuItem>
               <Select
-                defaultValue='typescript' // TODO: use the default from the atom instead
+                value={editorLanguage}
                 onValueChange={(value: EditorLanguage) => {
                   onLanguageChange(value)
                 }}
