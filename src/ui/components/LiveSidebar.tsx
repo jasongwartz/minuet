@@ -58,9 +58,10 @@ export function LiveSidebar({ tracks, webmidi }: { tracks: Track[]; webmidi?: ty
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        {webmidi !== undefined && webmidi.inputs.length !== 0 && (
-          <MidiDebugCard webmidi={webmidi} />
-        )}
+        {webmidi !== undefined &&
+          webmidi.supported &&
+          webmidi.enabled &&
+          webmidi.inputs.length !== 0 && <MidiDebugCard webmidi={webmidi} />}
       </SidebarFooter>
     </Sidebar>
   )

@@ -402,7 +402,12 @@ export class Engine {
 
   async start() {
     await Tone.start()
-    this.webMidi = await this.webMidi.enable()
+    // Only try to enable WebMidi if the browser supports it
+    if (this.webMidi.supported) {
+      this.webMidi = await this.webMidi.enable()
+    } else {
+      console.warn('Web MIDI API is not supported in this browser')
+    }
     // Tone.Transport.timeSignature = [22, 8]
     await this.userMediaStreams.default.open()
     this.transport.start()
