@@ -3,6 +3,12 @@ import './App.css'
 import type { OnMount } from '@monaco-editor/react'
 import { Analytics } from '@vercel/analytics/react'
 import { useAtom, useSetAtom } from 'jotai'
+import type * as monaco from 'monaco-editor'
+import * as prettier from 'prettier'
+// Prettier plugins have empty .d.ts files, causing import/namespace warnings
+// eslint-disable-next-line import/namespace
+import * as prettierPluginEstree from 'prettier/plugins/estree'
+import * as prettierPluginTypescript from 'prettier/plugins/typescript'
 import { useEffect, useRef, useState } from 'react'
 import type * as Tone from 'tone'
 import { z, ZodError } from 'zod/v4'
@@ -104,9 +110,54 @@ const App = () => {
     editorLanguageRef.current = editorLanguage
   })
 
+  // Create a Prettier-based formatting provider for a given parser
+  const createPrettierFormatter = (
+    parser: 'typescript' | 'babel',
+  ): monaco.languages.DocumentFormattingEditProvider => ({
+    async provideDocumentFormattingEdits(model: monaco.editor.ITextModel) {
+      const text = model.getValue()
+
+      try {
+        const formatted = await prettier.format(text, {
+          parser,
+          plugins: [prettierPluginTypescript, prettierPluginEstree],
+          semi: false,
+          singleQuote: true,
+          tabWidth: 2,
+          trailingComma: 'all',
+          useTabs: false,
+          printWidth: 100,
+          arrowParens: 'always',
+          bracketSpacing: true,
+          jsxSingleQuote: true,
+        })
+
+        return [
+          {
+            range: model.getFullModelRange(),
+            text: formatted,
+          },
+        ]
+      } catch (error) {
+        console.error('Prettier formatting failed:', error)
+        return []
+      }
+    },
+  })
+
   const onEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
     monaco.editor.setTheme('vs-light')
+
+    // Register Prettier-based formatters to override Monaco's built-in formatters
+    monaco.languages.registerDocumentFormattingEditProvider(
+      'typescript',
+      createPrettierFormatter('typescript'),
+    )
+    monaco.languages.registerDocumentFormattingEditProvider(
+      'javascript',
+      createPrettierFormatter('babel'),
+    )
 
     const evaluateEditorCallback = () => {
       if (!engineRef.current) {
