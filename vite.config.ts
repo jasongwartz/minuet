@@ -16,6 +16,33 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split large runtime libraries into separate chunks
+          pyodide: ['pyodide'],
+          monaco: ['@monaco-editor/react', 'monaco-editor'],
+          tone: ['tone'],
+          wasmoon: ['wasmoon'],
+          // Group Radix UI components together
+          'radix-ui': [
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-collapsible',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-hover-card',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-select',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/themes',
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tsconfigPaths(),

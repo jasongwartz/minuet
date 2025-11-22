@@ -6,7 +6,7 @@ import { ZodError } from 'zod/v4'
 
 import { Engine } from '../ostinato'
 import { execFromEditor } from './evaluate'
-import { PLUGINS } from './plugins'
+import { luaPlugin } from './plugins/lua'
 
 vi.mock('tone', () => ({
   start: vi.fn(),
@@ -176,8 +176,6 @@ describe('execFromEditor', () => {
 
 describe('Language plugin implementations', () => {
   describe('Lua', () => {
-    const luaPlugin = PLUGINS.lua
-
     it.each([
       {
         description: 'returns number values directly',

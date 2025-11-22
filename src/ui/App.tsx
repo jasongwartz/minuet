@@ -181,17 +181,19 @@ const App = () => {
             }
 
             setEditorLanguage(lang)
-            if (PLUGINS[lang].register) {
-              toast({
-                description: `Loading plugin "${PLUGINS[lang].name}"`,
+            const pluginLoader = PLUGINS[lang]
+            toast({
+              description: `Loading plugin "${pluginLoader.name}"`,
+            })
+            pluginLoader
+              .load()
+              .then(async (plugin) => {
+                if (plugin.register) {
+                  await plugin.register()
+                }
+                toast({ description: `Language plugin "${pluginLoader.name}" loaded successfully` })
               })
-              PLUGINS[lang]
-                .register()
-                .then(() => {
-                  toast({ description: `Language plugin "${lang}" loaded successfully` })
-                })
-                .catch(console.error)
-            }
+              .catch(console.error)
           }}
         />
         <div className='w-full min-w-0'>
